@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head> 
+<meta charset="utf-8">
+<meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>JS 3.x_JA 4.x Mix Map</title>
+<!--以下のblogの動画内でのコード を 拡張-->
+<!--http://odoe.net/blog/void-your-arcgis-api-for-javascript-warranty/-->
+<!--JS API 4.5以上に変更したら動かないようです-->
+<style>
+        html,
+        body {
+            padding: 0;
+            margin: 0;
+            height:100%;
+            width: 100%;    
+        }
+        #map{
+          height:50%;
+        }
+        #viewDiv {
+          height:50%;
+        }
+
+
+
+</style>
+<link rel="stylesheet" href="https://js.arcgis.com/3.24/esri/css/esri.css">
+<link rel="stylesheet" href="https://js.arcgis.com/4.4/esri/css/main.css">
+<script>
+  window.dojoConfig = {
+      async: true,
+      packages: [
+          {
+              name:"esri4",
+              location: "https://js.arcgis.com/4.4/esri"
+          },
+          {
+              location: "https://js.arcgis.com/4.4/esri/layers/FeatureLayer"
+          }
+      ],
+      has:{
+          "dojo-preload-i18n-Api":false
+      }
+  }
+</script>    
+<script src="https://js.arcgis.com/3.24/"></script>
+
+<script>
+require([
+  "esri/map", 
+  "esri/layers/FeatureLayer",
+  "esri4/Map",
+  "esri4/layers/FeatureLayer",
+  "esri4/views/SceneView",
+  "dojo/domReady!"
+], function(Map3, FeatureLayer, Map4, FeatureLayer4,SceneView) {
+  
+  // 3.x
+  const map3 = new Map3("map",{
+      center:[-118, 34.5],
+      zoom: 8,
+      basemap:"topo"
+  });
+  
+  const firePerimeterFL = new FeatureLayer("https://sampleserver6.arcgisonline.com/arcgis/rest/services/Wildfire/FeatureServer/2", {
+          mode: FeatureLayer.MODE_ONDEMAND,
+          outFields: ["*"],
+          id: "firePerimeterFL"
+  });
+  map3.addLayers([firePerimeterFL]);
+  
+
+  // 4.x
+  const map4 = new Map4({
+      basemap: "streets",
+      ground: "world-elevation"
+  });
+
+  const firePerimeterFL4 = new FeatureLayer4("https://sampleserver6.arcgisonline.com/arcgis/rest/services/Wildfire/FeatureServer/2", {
+          outFields: ["*"],
+          id: "firePerimeterFL"
+  });
+  map4.layers.add(firePerimeterFL4);
+
+  const view = new SceneView({
+      container: "viewDiv",
+      map: map4,
+      scale:50000000,
+      center:[-101.17, 21.78]
+  });
+
+  // 3.x と 4.xの範囲同期
+  map3.on("extent-change",({extent}) => {
+      const data = extent.toJson();
+      view.extent = data;
+  });
+
+});
+
+</script>
+
+</head>
+<body>
+    <div id="map"></div>
+    <div id="viewDiv"></div>
+</body>
+</html>
