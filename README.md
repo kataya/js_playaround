@@ -1,3 +1,4 @@
+
 # js_playground
 
 気になる JavaScript のコードを触ってみたコード集
@@ -5,6 +6,8 @@
 
 [src] - コードの格納先
 - js3x_4x_mixmap.html
+
+  https://kataya.github.io/js_playaround/src/js3x_4x_mixmap.html
 
   ArcGIS API for JavaScript 4.x と 3.x の両方のライブラリを Map と Scene の連携
 
