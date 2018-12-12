@@ -1,0 +1,214 @@
+<!DOCTYPE html> 
+<html>
+<head>
+<meta charset="utf-8">
+<!--
+河瀬和重 (2011):Gauss-Krüger 投影における経緯度座標及び平面直角座標相互間の座標換算についてのより簡明な計算方法
+http://www.gsi.go.jp/common/000061216.pdf
+のコードを可読性がよいようにした
+-->
+<title>Krueger の式により（φ, λ → X, Y）の座標換算を行うページ</title>
+<script type="text/javascript">
+
+function sinh(x) {
+  return 0.5*(Math.exp(x)-Math.exp(-x));
+}
+function cosh(x) { 
+  return 0.5*(Math.exp(x)+Math.exp(-x));
+}
+function arctanh(x) {
+  return 0.5*Math.log((1+x)/(1-x));
+}
+
+var a=6378137;
+var rf=298.257222101;
+var m0=0.9999;
+var s2r=Math.PI/648000;
+var n=0.5/(rf-0.5);
+var n15=1.5*n;
+var anh=0.5*a/(1+n);
+var nsq=n*n;
+var e2n=2*Math.sqrt(n)/(1+n);
+var ra=2*anh*m0*(1+nsq/4+nsq*nsq/64);
+var jt=5;
+var jt2=2*jt;
+var ep=1.0;
+var e=[];
+var s=[0.0];
+var t=[];
+var alp=[];
+for(k=1; k<=jt; k++) {
+  ep*=e[k]=n15/k-n; 
+  e[k+jt]=n15/(k+jt)-n;
+}
+
+// 展開パラメータの事前入力
+alp[1]=(1/2+(-2/3+(5/16+(41/180-127/288*n)*n)*n)*n)*n;
+alp[2]=(13/48+(-3/5+(557/1440+281/630*n)*n)*n)*nsq;
+alp[3]=(61/240+(-103/140+15061/26880*n)*n)*n*nsq;
+alp[4]=(49561/161280-179/168*n)*nsq*nsq;
+alp[5]=34729/80640*n*nsq*nsq;
+
+// 平面直角座標の座標系原点の緯度を度単位で、経度を分単位で格納
+var phi0=[0,33,33,36,33,36,36,36,36,36,40,44,44,44,26,26,26,26,20,26];
+var lmbd0=[0,7770,7860,7930,8010,8060,8160,8230,8310,8390,8450,8415,8535,8655,8520,7650,7440,7860,8160,9240];
+
+// 該当緯度の 2 倍角の入力により赤道からの子午線弧長を求める関数
+function Merid(phi2) {
+  var dc=2.0*Math.cos(phi2);
+  s[1]=Math.sin(phi2);
+  for(i=1; i<=jt2; i++) { 
+    s[i+1]=dc*s[i]-s[i-1];
+    t[i]=(1.0/i-4.0*i)*s[i];
+  }
+
+  var sum=0.0;
+  var c1=ep;
+  var j=jt;
+  while(j) {
+    var c2=phi2;
+    var c3=2.0;
+    var l=j;
+    var m=0
+    while(l) {
+      c2+=(c3/=e[l--])*t[++m]+(c3*=e[2*j-l])*t[++m];
+    }
+    sum+=c1*c1*c2;
+    c1/=e[j--]
+  }
+  return anh*(sum+phi2);
+}
+
+// 与件入力 - 廃止
+//var num=eval(prompt("座標系番号を入力してください。"));
+//var phi=eval(prompt("緯度を ddmmss.ssss 形式で入力してください。"));
+//var lmbd=eval(prompt("経度を dddmmss.ssss 形式で入力してください。"));
+
+
+// 実際の計算実行部分 - functionに変更
+// ECMAScript6以降ではfunctionの複数戻り値をサポート
+function BlToXy(num, phi, lmbd){
+  
+  var phideg=Math.floor(phi/10000);
+  var phimin=Math.floor((phi-phideg*10000)/100);
+  var phirad=(phideg*3600+phimin*60+phi-phideg*10000-phimin*100)*s2r;
+  var lmbddeg=Math.floor(lmbd/10000);
+  var lmbdmin=Math.floor((lmbd-lmbddeg*10000)/100);
+  var lmbdsec=lmbddeg*3600+lmbdmin*60+lmbd-lmbddeg*10000-lmbdmin*100;
+
+  var sphi=Math.sin(phirad);
+  var nphi=(1-n)/(1+n)*Math.tan(phirad);
+  var dlmbd=(lmbdsec-lmbd0[num]*60)*s2r;
+  var sdlmbd=Math.sin(dlmbd);
+  var cdlmbd=Math.cos(dlmbd);
+  var tchi=sinh(arctanh(sphi)-e2n*arctanh(e2n*sphi));
+  var cchi=Math.sqrt(1+tchi*tchi);
+  var xi=xip=Math.atan2(tchi, cdlmbd);
+  var eta=etap=arctanh(sdlmbd/cchi);
+  var sgm=1;
+  var tau=0;
+  for(j=alp.length; --j; ) {
+    var alsin=alp[j]*Math.sin(2*j*xip);
+    var alcos=alp[j]*Math.cos(2*j*xip);
+    xi+=alsin*cosh(2*j*etap); 
+    eta+=alcos*sinh(2*j*etap);
+    sgm+=2*j*alcos*cosh(2*j*etap);
+    tau+=2*j*alsin*sinh(2*j*etap);
+  }
+  
+  var x=ra*xi-m0*Merid(2*phi0[num]*3600*s2r);
+  var y=ra*eta;
+  var gmm=Math.atan2(tau*cchi*cdlmbd+sgm*tchi*sdlmbd, sgm*cchi*cdlmbd-tau*tchi*sdlmbd);
+  var m=ra/a*Math.sqrt((sgm*sgm+tau*tau)/(tchi*tchi+cdlmbd*cdlmbd)*(1+nphi*nphi));
+  
+  // ラジアン → 度分秒変換
+  var sgn=(gmm<0)
+  var gdo=Math.floor(gmm/s2r/3600)+sgn;
+  var gfun=Math.floor((gmm/s2r-gdo*3600)/60)+sgn;
+  var gbyou=gmm/s2r-gdo*3600-gfun*60;
+
+  return [x, y, sgn, gdo, gfun, gbyou, m];
+}
+
+
+// UI操作
+function execCalc()
+{
+  var num = Number(document.getElementById("kei").value);
+  var phi = Number(document.getElementById("valphi").value);
+  var lmbd = Number(document.getElementById("vallmbd").value);
+
+  // 計算実行
+  var [x, y, sgn, gdo, gfun, gbyou, m] = BlToXy(num, phi, lmbd);
+
+  // 計算結果をUI上で表示
+  // X座標
+  // Y座標
+  // 真北方向角γ ＋－が Webページでの結果と逆？
+  // 縮尺係数m
+  var out = document.getElementById("divOut");
+  out.innerHTML = "<p><b>計算結果</b></p>" + 
+                  "X座標=" + x + "m, Y座標=" + y + "m<br/>" + 
+                  "真北方向角γ＝" + (sgn?"－":"＋") + Math.abs(gdo) + "°" + Math.abs(gfun) + "′" + Math.abs(gbyou) + "″，縮尺係数m＝" + m + "<br/></h2>";
+
+}
+
+// 結果表示
+//document.write("<h2>座標系番号： " + num + " 緯度： " + phi + " 経度： " + lmbd + "<br/><br/>")
+//document.write("Ｘ＝" + x + "，Ｙ＝" + y + "<br/>")
+//document.write("γ＝" + (sgn?"－":"＋") + Math.abs(gdo) + "°" + Math.abs(gfun) + "′" + Math.abs(gbyou) + "″，m＝" + m + "<br/></h2>")
+
+</script>
+</head>
+<body>
+  <h3>平面直角座標を換算して経緯度、子午線収差角及び縮尺係数を求める計算</h3>
+  <p><b>～Krueger の式により緯度経度 → 平面直角座標（φ, λ → X, Y）の座標換算～</b></p>
+  <!--計算確認のため https://vldb.gsi.go.jp/sokuchi/surveycalc/surveycalc/bl2xyf.html と同じ値をデフォルト値で設定-->
+  <!--測地系：世界測地系 平面直角座標９系-->
+  <!--緯度  36° 6′13.58925″ →　 360613.58925-->
+  <!--経度 140° 5′16.27815″ →  1400516.27815-->
+  <div id="divBl2Xy">
+    <table>
+      <tr>
+        <td>測地系：</td>
+        <td>世界測地系</td>
+      </tr>
+      <tr>
+        <td>平面直角座標系:</td>
+        <td><select id="kei">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+          <option value="7">7</option>
+          <option value="8">8</option>
+          <option value="9" selected>9</option>
+          <option value="10">10</option>
+          <option value="11">11</option>
+          <option value="12">12</option>
+          <option value="13">13</option>
+          <option value="14">14</option>
+          <option value="15">15</option>
+          <option value="16">16</option>
+          <option value="17">17</option>
+          <option value="18">18</option>
+          <option value="19">19</option>
+        </select></td>
+      </tr>
+      <tr>
+        <td>緯度（ 度分秒:  ddmmss.sssss ）:</td>
+        <td><input type="text" id="valphi" value="360613.58925"/></td>
+      </tr>     
+      <tr>
+        <td>経度（ 度分秒: dddmmss.sssss ）:</td>
+        <td><input type="text" id="vallmbd" value="1400516.27815"/></td>
+      </tr> 
+    </table>
+    <input type="button" value="計算実行" onclick="execCalc()" />
+  </div>
+  <div id="divOut"></div>
+</body>
+</html>
+
