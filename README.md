@@ -5,6 +5,14 @@
 
 
 [src] - コードの格納先
+
+- TmsTile.html
+
+  [レイヤーを拡張して「Tile Map Service」のサービスを表示](https://community.esri.com/docs/DOC-14101/) のソースコード
+  
+  サンプルとして、今昔マップ on the Web のTile Map Service を表示。
+
+
 - js3x_4x_mixmap.html
 
   [js3x_4x_mixmap](https://kataya.github.io/js_playaround/src/js3x_4x_mixmap.html)

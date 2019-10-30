@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Custom TileLayer - 4.13</title>
+  <link rel="stylesheet" href="https://js.arcgis.com/4.13/esri/themes/dark/main.css" />
+  <script src="https://js.arcgis.com/4.13/"></script>
+  <style>
+    html,
+    body,
+    #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+  <script>
+    require([
+      "esri/Map",
+      "esri/config",
+      "esri/request",
+      "esri/Color",
+      "esri/views/MapView",
+      "esri/widgets/LayerList",
+      "esri/widgets/Swipe",
+      "esri/widgets/Expand",
+      "esri/layers/WebTileLayer",
+      "esri/core/urlUtils",   
+      "dojo/domReady!"
+    ], function(
+      Map, esriConfig, esriRequest, Color,
+      MapView, LayerList, Swipe, Expand, WebTileLayer, urlUtils
+    ) {
+      
+      // *******************************************************
+      // ArcGIS API for JavaScript 4.x での TMSLayer の実装例
+      //   TMSLayer を WebTileLayer のサブクラスとして実装し、
+      //   getTileUrl() メソッドをオーバーライド
+      // *******************************************************
+      var TMSLayer = WebTileLayer.createSubclass({
+        getTileUrl: function(level, row, col){
+          //var y = Math.pow(2, level) - row - 1;
+          var y = (1 << level) - row - 1; // シフト演算の方を採用
+          return this.urlTemplate.replace("{level}", level).replace("{col}", col).replace("{row}", y);
+        }
+      });
+
+      // *******************************************************
+      // 参考： maps.nyc.gov でのTMSLayer の実装例
+      //   https://maps.nyc.gov/tiles/#arcgis4-xyz
+      // ******************************************************* 
+      /*       
+      var TMSLayer = WebTileLayer.createSubclass({
+        getTileUrl: function(level, row, col){
+          var supermethod = this.getInherited(arguments);
+          var y = Math.pow(2, level) - row - 1;
+          return supermethod.call(this, level, y, col);
+        }
+      }); 
+      */
+
+      // *******************************************************
+      // JavaScript API 4.9 から CORS をサポートしているのをデフォルトとして扱うようになったので
+      // CORS の設定をしていないサーバーを使う場合は、独自のプロキシ サービスを自分で設定しておく
+      //   参考：独自の Web サーバーにホストするプロキシ サービス
+      //     http://esrijapan.github.io/arcgis-dev-resources/proxy-services/
+      // *******************************************************
+
+      // 今回、設置した独自のプロキシ サービスは.NET 版
+      // サーバー側でのTLS 1.2 が未対応だったため、「独自の Web サーバーにホストするプロキシ サービス」に記載の回避コードを追記済み
+      urlUtils.addProxyRule({
+        urlPrefix: "sv53.wadax.ne.jp", //ktgis.net,www.finds.jp
+        proxyUrl: "https://yourhostserver/DotNet/proxy.ashx"
+      });
+
+
+      // *******************************************************
+      // JavaScript application の開始
+      // *******************************************************
+
+      // TMSLayer のインスタンスを作成し、プロパティを設定
+      var tmsLayer = new TMSLayer({
+       urlTemplate: "https://sv53.wadax.ne.jp/~ktgis-net/kjmapw/kjtilemap/tokyo50/2man/{level}/{col}/{row}.png",
+       opacity: 0.6,
+       title: "今昔マップ-首都圏編（1896-1909年）"
+      });
+
+      var tmsLayer1 = new TMSLayer({
+       urlTemplate: "https://sv53.wadax.ne.jp/~ktgis-net/kjmapw/kjtilemap/tokyo50/00/{level}/{col}/{row}.png",
+       opacity: 0.6,
+       title: "今昔マップ-首都圏編（1917-1924年）",
+       visible: false
+      });
+
+      var tmsLayer2 = new TMSLayer({
+       urlTemplate: "https://sv53.wadax.ne.jp/~ktgis-net/kjmapw/kjtilemap/tokyo50/01/{level}/{col}/{row}.png",
+       opacity: 0.6,
+       title: "今昔マップ-首都圏編（1927-1939年）",
+       visible: false
+      });
+
+      var tmsLayer3 = new TMSLayer({
+       urlTemplate: "https://sv53.wadax.ne.jp/~ktgis-net/kjmapw/kjtilemap/tokyo50/02/{level}/{col}/{row}.png",
+       opacity: 0.6,
+       title: "今昔マップ-首都圏編（1944-1954年）",
+       visible: false
+      });
+
+      var tmsLayer4 = new TMSLayer({
+       urlTemplate: "https://sv53.wadax.ne.jp/~ktgis-net/kjmapw/kjtilemap/tokyo50/03/{level}/{col}/{row}.png",
+       opacity: 0.6,
+       title: "今昔マップ-首都圏編（1965-1968年）",
+       visible: false
+      });
+
+      var tmsLayer5 = new TMSLayer({
+       urlTemplate: "https://sv53.wadax.ne.jp/~ktgis-net/kjmapw/kjtilemap/tokyo50/04/{level}/{col}/{row}.png",
+       opacity: 0.6,
+       title: "今昔マップ-首都圏編（1975-1978年）",
+       visible: false
+      });
+
+      var tmsLayer6 = new TMSLayer({
+       urlTemplate: "https://sv53.wadax.ne.jp/~ktgis-net/kjmapw/kjtilemap/tokyo50/05/{level}/{col}/{row}.png",
+       opacity: 0.6,
+       title: "今昔マップ-首都圏編（1983-1987年）",
+       visible: false
+      });
+
+      var tmsLayer7 = new TMSLayer({
+       urlTemplate: "https://sv53.wadax.ne.jp/~ktgis-net/kjmapw/kjtilemap/tokyo50/06/{level}/{col}/{row}.png",
+       opacity: 0.6,
+       title: "今昔マップ-首都圏編（1992-1995年）",
+       visible: false
+      });
+
+      var tmsLayer8 = new TMSLayer({
+       urlTemplate: "https://sv53.wadax.ne.jp/~ktgis-net/kjmapw/kjtilemap/tokyo50/07/{level}/{col}/{row}.png",
+       opacity: 0.6,
+       title: "今昔マップ-首都圏編（1998-2005年）",
+       visible: false
+      });
+
+      // TMSLayer のインスタンスをマップに追加
+      var map = new Map({
+        layers:[tmsLayer,tmsLayer1,tmsLayer2,tmsLayer3,tmsLayer4,tmsLayer5,tmsLayer6,tmsLayer7,tmsLayer8],
+        basemap: "topo"
+      });
+
+      // map を MapView に追加
+      var view = new MapView({
+        container: "viewDiv",
+        map: map,
+        center: [139.715512, 35.678257],
+        zoom: 15
+      });
+      
+      // ウィジェット活用１：
+      // 新規のLayerList widget を作成
+      var layerList = new LayerList({
+        view: view,
+      });
+      
+      // 新規のExpand widget を作成
+      var llExpand = new Expand({
+          view: view,
+          content: layerList,
+          expanded: false
+      });
+      
+      // widget を ui の右上へ追加 
+      view.ui.add(llExpand, "top-right");
+      
+      // ウィジェット活用２：
+      // 新規の Swipe widget を作成
+      var swipe = new Swipe({
+          //leadingLayers: [layername],// 今回は未使用
+          trailingLayers: [tmsLayer,tmsLayer1,tmsLayer2,tmsLayer3,tmsLayer4,tmsLayer5,tmsLayer6,tmsLayer7,tmsLayer8],
+          position: 50,  // widget の位置を50％に設定
+          view: view
+      });
+
+      // widget を ui に追加
+      view.ui.add(swipe);
+    });
+  </script>
+</head>
+
+<body>
+  <div id="viewDiv"></div>
+</body>
+
+</html>
