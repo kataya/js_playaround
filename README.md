@@ -6,6 +6,13 @@
 
 [src] - コードの格納先
 
+- CutsomBasemapGallery.html
+
+  [CutsomBasemapGallery](https://kataya.github.io/js_playaround/src/CutsomBasemapGallery.html)
+
+  ArcGIS API for JavaScript 4.x で、Custom BasemapGallery として、地理院タイル等をベースマップギャラリーに表示。
+
+
 - TmsTile.html
 
   [レイヤーを拡張して「Tile Map Service」のサービスを表示](https://community.esri.com/docs/DOC-14101/) のソースコード
