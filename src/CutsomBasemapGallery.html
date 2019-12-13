@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Custom BasemapGallery - 4.13</title>
+  <link rel="stylesheet" href="https://js.arcgis.com/4.13/esri/themes/dark/main.css" />
+  <script src="https://js.arcgis.com/4.13/"></script>
+  <style>
+    html,
+    body,
+    #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+  <script>
+    require([
+      "esri/Map",
+      "esri/views/MapView",
+      "esri/widgets/Expand",
+      "esri/Basemap",
+      "esri/widgets/BasemapGallery",
+      "esri/widgets/BasemapGallery/support/LocalBasemapsSource",      
+      "esri/layers/WebTileLayer",
+      "esri/layers/TileLayer", 
+      "dojo/domReady!"
+    ], function(
+        Map,
+        MapView,
+        Expand,
+        Basemap,
+        BasemapGallery,
+        LocalBasemapsSource,
+        WebTileLayer,
+        TileLayer
+    ) {
+      // *******************************************************
+      // Esri 以外のさまざまなタイルレイヤーを、BasemapGallery から利用するサンプル
+      // 
+      // カスタムグループを作ってベースマップを登録するのが定石ですが、そこはあえてコードで試してみる
+      // 参考：JS 4.5での海外ユーザーのコード
+      //   https://codepen.io/ziveo/pen/aLKXBL
+      // *******************************************************
+
+      const map = new Map({
+        basemap: "topo"
+      });
+
+      const view = new MapView({
+        container: "viewDiv",
+        map: map,
+        center: [139.715512, 35.678257],
+        zoom: 15
+      });
+      
+      // Esri Topo Layers
+      const esriTopo = new Basemap({
+        baseLayers: [new TileLayer({
+          url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer?f=json"
+        })],
+        title: "Esri - Topo",
+        id: "Topo",
+        thumbnailUrl:"https://js.arcgis.com/4.13/esri/images/basemap/topo.jpg"
+      });
+      
+      // Custom Tile Layers
+      const mozilla = new Basemap({
+        baseLayers: [new WebTileLayer({
+          urlTemplate: "http://{subDomain}.tiles.mapbox.com/v3/mozilla-webprod.e91ef8b3/{level}/{col}/{row}.png",
+          subDomains: ["a", "b", "c", "d"],
+          copyright: "Map tiles"
+        })],
+        title: "Mozilla – Mapbox",
+        id: "mozilla",
+        thumbnailUrl: "https://stamen-tiles.a.ssl.fastly.net/terrain/10/177/409.png"
+      });
+
+      /*
+       地理院タイル（ベースマップ）のページから情報を整理
+         https://maps.gsi.go.jp/development/ichiran.html#std
+       
+       ※ 実装時には、URL の /{z}/{x}/{y} は /{level}/{col}/{row} に変更
+ 
+       標準地図：レベル 5-18
+         urlTemplate: "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png"
+         copyright: "地理院タイル"
+         title: "標準地図"
+         thumbnailUrl: "https://cyberjapandata.gsi.go.jp/xyz/std/12/3637/1612.png"
+
+       淡色地図：レベル 5-18
+         urlTemplate: "https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png"
+         copyright: "地理院タイル"
+         title: "淡色地図"
+         thumbnailUrl: "https://cyberjapandata.gsi.go.jp/xyz/pale/12/3637/1612.png"
+
+       English：レベル 5-11
+         urlTemplate: "https://cyberjapandata.gsi.go.jp/xyz/english/{z}/{x}/{y}.png"
+         copyright: "地理院タイル"		 
+         title: "English"
+         thumbnailUrl: "https://cyberjapandata.gsi.go.jp/xyz/english/10/909/403.png"
+
+       写真：レベル 2-18
+         urlTemplate: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg"
+         copyright: "地理院タイル"
+         title: 写真
+         thumbnailUrl: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/16/58274/25716.jpg"  
+       */
+
+      const stdMap = new Basemap({
+        baseLayers:[new WebTileLayer({
+          urlTemplate: "https://cyberjapandata.gsi.go.jp/xyz/std/{level}/{col}/{row}.png",
+          copyright: "地理院タイル （https://maps.gsi.go.jp/development/ichiran.html）"
+        })],
+        title: "地理院タイル - 標準地図",
+        id: "stdmap",
+        thumbnailUrl: "https://cyberjapandata.gsi.go.jp/xyz/std/12/3637/1612.png",
+        maxScale: 18,
+        minScale: 9
+      });	  
+
+      const paleMap = new Basemap({
+        baseLayers:[new WebTileLayer({
+          urlTemplate: "https://cyberjapandata.gsi.go.jp/xyz/pale/{level}/{col}/{row}.png",
+          copyright: "地理院タイル （https://maps.gsi.go.jp/development/ichiran.html）"
+        })],
+        title: "地理院タイル - 淡色地図",
+        id: "palemap",
+        thumbnailUrl: "https://cyberjapandata.gsi.go.jp/xyz/pale/12/3637/1612.png",
+        maxScale: 18,
+        minScale: 9
+      });	
+     
+     /*
+     const englishMap = new Basemap({
+        baseLayers:[new WebTileLayer({
+          urlTemplate: "https://cyberjapandata.gsi.go.jp/xyz/english/{level}/{col}/{row}.png",
+          copyright: "地理院タイル （https://maps.gsi.go.jp/development/ichiran.html）"
+        })],
+        title: "English",
+        id: "englishmap",
+        thumbnailUrl: "https://cyberjapandata.gsi.go.jp/xyz/english/10/909/403.png",
+        maxScale: 11,
+        minScale: 5
+      });
+     */	
+ 
+      const seamlessPhoto = new Basemap({
+        baseLayers:[new WebTileLayer({
+          urlTemplate: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{level}/{col}/{row}.jpg",
+          copyright: "地理院タイル （https://maps.gsi.go.jp/development/ichiran.html）"
+        })],
+        title: "地理院タイル - 写真",
+        id: "seamlessphoto",
+        thumbnailUrl:"https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/16/58274/25716.jpg",
+        maxScale: 18,
+        minScale: 9
+      });
+
+      // Basemap Sources
+      const localSource = new LocalBasemapsSource({
+        basemaps: [esriTopo, mozilla ,stdMap, paleMap, seamlessPhoto]
+      });
+
+      // Basemap Gallery Widget
+      const basemapGallery = new BasemapGallery({
+        view: view,
+        container: document.createElement("div"),
+        source: localSource
+      });
+
+      // Basemap Gallery Widget – Expand Button
+      const basemapGalleryExpand = new Expand({
+        view: view,
+        content: basemapGallery.domNode,
+        expandIconClass: "esri-icon-basemap"
+      });
+
+      view.ui.add(basemapGalleryExpand, {
+        position: "top-right"
+      });
+      
+    });
+  </script>
+</head>
+
+<body>
+  <div id="viewDiv"></div>
+</body>
+
+</html>
