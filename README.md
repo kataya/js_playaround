@@ -6,21 +6,21 @@
 
 [src] - コードの格納先
 
-- CutsomBasemapGallery.html
-
+## CutsomBasemapGallery.html
+  
   [CutsomBasemapGallery](https://kataya.github.io/js_playaround/src/CutsomBasemapGallery.html)
 
   ArcGIS API for JavaScript 4.x で、Custom BasemapGallery として、地理院タイル等をベースマップギャラリーに表示。
 
 
-- TmsTile.html
+## TmsTile.html
 
   [レイヤーを拡張して「Tile Map Service」のサービスを表示](https://community.esri.com/docs/DOC-14101/) のソースコード
   
   サンプルとして、今昔マップ on the Web のTile Map Service を表示。
 
 
-- js3x_4x_mixmap.html
+## js3x_4x_mixmap.html
 
   [js3x_4x_mixmap](https://kataya.github.io/js_playaround/src/js3x_4x_mixmap.html)
 
@@ -31,7 +31,7 @@
   http://odoe.net/blog/void-your-arcgis-api-for-javascript-warranty/
 
 
-- BLTOXY.html, XYTOBL.html
+## BLTOXY.html, XYTOBL.html
 
   [BLTOXY](https://kataya.github.io/js_playaround/src/BLTOXY.html) 
   
