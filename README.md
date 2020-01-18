@@ -6,6 +6,18 @@
 
 [src] - コードの格納先
 
+- js331_drawinfo_v2.html, js414_drawinfo_v2.html
+
+  [ArcGIS API for JavaScript 3.x 系でFeuatuerLayer の描画パフォーマンス表示](https://kataya.github.io/js_playaround/src/js331_drawinfo_v2.html)
+
+  ArcGIS API for JavaScript 3.31 で、FeuatuerLayer の描画パフォーマンスを表示するサンプルアプリ。
+
+  [ArcGIS API for JavaScript 4.x 系でFeuatuerLayer の描画パフォーマンス表示](https://kataya.github.io/js_playaround/src/js414_drawinfo_v2.html)
+
+  ArcGIS API for JavaScript 4.14 で、FeuatuerLayer の描画パフォーマンスを表示するサンプルアプリ。
+
+  ※ 4.x 系は現在主軸の開発APIで、バージョンアップごとにパフォーマンス改善にも注力されている。4.13 -> 4.14でも GPUやWebGLのパフォーマンスが[改善](https://developers.arcgis.com/javascript/latest/guide/release-notes/)。
+
 - CutsomBasemapGallery.html
 
   [CutsomBasemapGallery](https://kataya.github.io/js_playaround/src/CutsomBasemapGallery.html)
