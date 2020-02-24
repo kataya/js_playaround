@@ -27,6 +27,13 @@
   ArcGIS API for JavaScript 4.x で、Custom BasemapGallery として、地理院タイル等をベースマップギャラリーに表示。
 
 
+## SwipeWSMapSatellite.html
+  
+  [World Street Map の Roads と Buildings を Satellite とスワイプして見るアプリ](https://kataya.github.io/js_playaround/src/SwipeWSMapSatellite.html)
+
+  ArcGIS API for JavaScript 4.x で、ベクタータイルの利点を活用し、World Street Map の Roads と Buildings のみを、Satellite とスワイプして見るアプリ。
+
+
 ## TmsTile.html
 
   [レイヤーを拡張して「Tile Map Service」のサービスを表示](https://community.esri.com/docs/DOC-14101/) のソースコード
