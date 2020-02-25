@@ -28,6 +28,10 @@
       "esri/widgets/Swipe",
       "esri/widgets/Expand",
       "esri/widgets/CoordinateConversion",
+      "esri/widgets/Search",
+      "esri/Basemap",
+      "esri/widgets/BasemapGallery",
+      "esri/widgets/BasemapGallery/support/LocalBasemapsSource",
       "esri/layers/WebTileLayer",
       "esri/layers/TileLayer",
       "esri/layers/VectorTileLayer",
@@ -43,6 +47,10 @@
       Swipe,
       Expand,
       CoordinateConversion,
+      Search,
+      Basemap,
+      BasemapGallery,
+      LocalBasemapsSource,
       WebTileLayer,
       TileLayer,
       VectorTileLayer,
@@ -2406,6 +2414,98 @@
       showCoordinates(view.toMap({ x: evt.x, y: evt.y }));
     });
 
+    // ウィジェット活用４：
+    // SearchWidget を ExpandWidget 内に配置
+    // https://developers.arcgis.com/javascript/latest/api-reference/esri-widgets-Expand.html
+    var search = new Search({
+　　    view: view
+    });
+    
+    var searchExpand = new Expand({
+     expandIconClass: "esri-icon-search",
+     view: view,
+     content: search
+    });
+    view.ui.add(searchExpand, "top-right");
+    
+    // ウィジェット活用５：
+    // ベースマップギャラリーと地理院タイルなど
+    // Esri - Topo
+    var esriTopo = new Basemap({
+        baseLayers: [new TileLayer({
+          url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer?f=json"
+        })],
+        title: "Esri - Topo",
+        id: "Topo",
+        thumbnailUrl:"https://js.arcgis.com/4.14/esri/images/basemap/topo.jpg"
+    });
+    
+    // Esri - Satellite
+    var esriSatelite = new Basemap({
+        baseLayers: [new TileLayer({
+          url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer?f=json"
+        })],
+        title: "Esri - Satellite",
+        id: "Satellite",
+        thumbnailUrl:"https://js.arcgis.com/4.14/esri/images/basemap/satellite.jpg"
+    });
+    
+    // 地理院 - 標準地図
+    var stdMap = new Basemap({
+        baseLayers:[new WebTileLayer({
+          urlTemplate: "https://cyberjapandata.gsi.go.jp/xyz/std/{level}/{col}/{row}.png",
+          copyright: "地理院タイル （https://maps.gsi.go.jp/development/ichiran.html）"
+        })],
+        title: "地理院タイル - 標準地図",
+        id: "stdmap",
+        thumbnailUrl: "https://cyberjapandata.gsi.go.jp/xyz/std/12/3637/1612.png"
+    });
+    
+    // 地理院 - 淡色地図
+    var paleMap = new Basemap({
+        baseLayers:[new WebTileLayer({
+          urlTemplate: "https://cyberjapandata.gsi.go.jp/xyz/pale/{level}/{col}/{row}.png",
+          copyright: "地理院タイル （https://maps.gsi.go.jp/development/ichiran.html）"
+        })],
+        title: "地理院タイル - 淡色地図",
+        id: "palemap",
+        thumbnailUrl: "https://cyberjapandata.gsi.go.jp/xyz/pale/12/3637/1612.png"
+    });
+    
+    // 地理院 - 写真
+    var seamlessPhoto = new Basemap({
+        baseLayers:[new WebTileLayer({
+          urlTemplate: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{level}/{col}/{row}.jpg",
+          copyright: "地理院タイル （https://maps.gsi.go.jp/development/ichiran.html）"
+        })],
+        title: "地理院タイル - 写真",
+        id: "seamlessphoto",
+        thumbnailUrl:"https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/16/58274/25716.jpg"
+    });
+    
+    var localSource = new LocalBasemapsSource({
+        basemaps: [esriTopo, esriSatelite, stdMap, paleMap, seamlessPhoto]
+    });
+    
+    // Basemap Gallery Widget
+    var basemapGallery = new BasemapGallery({
+        view: view,
+        container: document.createElement("div"),
+        source: localSource
+    });
+    
+    // Basemap Gallery Widget – Expand Button
+    var basemapGalleryExpand = new Expand({
+        view: view,
+        content: basemapGallery.domNode,
+        expandIconClass: "esri-icon-basemap"
+    });
+
+    view.ui.add(basemapGalleryExpand, {
+        position: "bottom-left"
+    });
+    
+    
     });
   </script>
 </head>
