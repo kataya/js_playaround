@@ -16,6 +16,21 @@
       height: 100%;
       width: 100%;
     }
+    
+    #footer {
+        position: absolute;
+        bottom: 20px;
+        height:100px;
+        width: 400px;
+        text-align: center;
+        padding: 10px 15px 0 15px;
+    }
+
+    #slider {
+        width: 100%;
+        padding: 0;
+        height: 60px;
+    }
   </style>
   <script>
     require([
@@ -29,6 +44,7 @@
       "esri/widgets/Expand",
       "esri/widgets/CoordinateConversion",
       "esri/widgets/Search",
+      "esri/widgets/Slider",
       "esri/Basemap",
       "esri/widgets/BasemapGallery",
       "esri/widgets/BasemapGallery/support/LocalBasemapsSource",
@@ -48,6 +64,7 @@
       Expand,
       CoordinateConversion,
       Search,
+      Slider,
       Basemap,
       BasemapGallery,
       LocalBasemapsSource,
@@ -2350,6 +2367,7 @@
         zoom: 15
     });
       
+/*
     // ウィジェット活用１：
     // LayerList widget を作成
     var layerList = new LayerList({
@@ -2362,10 +2380,12 @@
         content: layerList,
         expanded: false
     });
-
+    
     // widget を ui の右上へ追加 
     view.ui.add(llExpand, "top-right");
     
+*/
+
     // ウィジェット活用２：
     // Swipe widget を作成
     var swipe = new Swipe({
@@ -2502,9 +2522,37 @@
     });
 
     view.ui.add(basemapGalleryExpand, {
-        position: "bottom-left"
+        position: "top-right"//"bottom-left"
     });
     
+    // ウィジェット活用５：
+    // Slider Widget
+    // https://developers.arcgis.com/javascript/latest/sample-code/layers-dynamicdatalayer-raster/index.html
+    vtLayer.when(function() {
+        var slider = new Slider({
+             container: "slider",
+            min: 0,
+            max: 100,
+            values: [70],
+            labelsVisible: true
+        });
+        
+        function onOpacitySliderChange() {
+            vtLayer.opacity = slider.values[0]/100;
+        }
+
+        slider.on("thumb-drag", onOpacitySliderChange);
+    });
+    
+    var sliderExpand = new Expand({
+        view: view,
+        expandIconClass: "esri-icon-environment-settings",
+        content: footer
+    });
+    
+    view.ui.add(sliderExpand, {
+        position: "bottom-left"
+    });
     
     });
   </script>
@@ -2512,6 +2560,10 @@
 
 <body>
   <div id="viewDiv"></div>
+  <div id="footer" class="esri-widget">
+    <div>透過</div>
+    <div id="slider"></div>
+  </div>
 </body>
 
 </html>
