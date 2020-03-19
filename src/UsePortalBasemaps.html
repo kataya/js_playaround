@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no"/>
+    <title>Use Portal Basemaps - 4.14</title>
+    <link rel="stylesheet" href="https://js.arcgis.com/4.14/esri/themes/light/main.css"/>
+    <script src="https://js.arcgis.com/4.14/"></script>
+    <style>
+      html,
+      body,
+      #viewDiv {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+      }
+    </style>
+    <script>
+      require([
+        "esri/config",
+        "esri/Map",
+        "esri/portal/Portal",
+        "esri/views/MapView",
+        "esri/widgets/BasemapGallery",
+        "esri/widgets/Search",
+        "esri/widgets/Expand"
+      ], function(
+        esriConfig,
+        Map,
+        Portal,
+        MapView,
+        BasemapGallery,
+        Search,
+        Expand
+      ) {
+        
+        // esriConfig に Portal URL が定義されている場合、
+        // basemapGallery widget はどのベースマップを使うかを決定する
+        // 元サンプルにある次の記述はコメントアウト
+        //esriConfig.portalUrl = "https://jsapi.maps.arcgis.com";
+        // portal のインスタンスを初期化しロード
+        var portal = new Portal();
+        //　通常は自組織のportal にログインが必要なアプリがほとんど
+        // べースマップでベクター、ラスターどっちを使うかは、ログインした後の[組織] - [設定] - [マップ] - [べースマップ ギャラリー]の設定に従う。
+        // 一方、ログインなしの場合はデフォルトの設定を使う（現在はベクタータイルベースマップ）
+        // portal.authMode = "immediate"; // コメントアウト
+        
+        portal
+          .load()
+          .then(function() {
+            console.log(portal);
+            // portal.useVectorBasemaps のbool値をチェックし、
+            // デフォルトべースマップのベクターもしくはラスターかのどちらかを設定
+            var basemap = portal.useVectorBasemaps
+              ? portal.defaultVectorBasemap
+              : portal.defaultBasemap;
+            var map = new Map({
+              basemap: basemap
+            });
+            var view = new MapView({
+              container: "viewDiv",
+              map: map,
+              center: [139.715512, 35.678257], // 関東周辺
+              zoom: 8
+            });
+
+            // esriConfig.portalUrl に定義されている portal のURLを使って
+            // BasemapGallery widget で使うベースマップを決定する
+            var basemapGallery = new BasemapGallery({
+              view: view
+            });
+            var bgExpand = new Expand({
+              view: view,
+              content: basemapGallery
+            });
+            view.ui.add(bgExpand, "bottom-left");
+            // Search widget も BasemapGallery と同様に
+            // esriConfig.portalUrl に定義されている portal のURLを使って
+            // 利用するロケーターを決定する
+            var search = new Search({ view: view });
+            view.ui.add(search, "top-right");
+
+          })
+          .catch(function(error) {
+            console.warn(error);
+          });
+        
+      });
+    </script>
+  </head>
+  <body>
+    <div id="viewDiv"></div>
+  </body>
+</html>

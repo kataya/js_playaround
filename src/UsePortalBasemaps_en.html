@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no"/>
+    <title>Use Portal Basemaps in English - 4.14</title>
+    <link rel="stylesheet" href="https://js.arcgis.com/4.14/esri/themes/light/main.css"/>
+    <!-- UI のローカライズ : How does localization work with the ArcGIS for JavaScript API ? -->
+    <!-- https://developers.arcgis.com/javascript/latest/guide/localization/index.html -->
+    <script>
+      // JSAPI のロード前に locale をセットする
+      dojoConfig = {
+        locale: "en",
+        parseOnLoad: true
+      };
+    </script>
+    <script src="https://js.arcgis.com/4.14/"></script>
+    <style>
+      html,
+      body,
+      #viewDiv {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+      }
+    </style>
+    <script>
+      require([
+        "esri/config",
+        "esri/Map",
+        "esri/portal/Portal",
+        "esri/views/MapView",
+        "esri/widgets/BasemapGallery",
+        "esri/widgets/Search",
+        "esri/widgets/Expand"
+      ], function(
+        esriConfig,
+        Map,
+        Portal,
+        MapView,
+        BasemapGallery,
+        Search,
+        Expand
+      ) {
+        // リクエストを横取りして対応するTips:
+        // http request を確認するとPortal にログインしないデフォルト状態だと以下のリクエストをなげている
+        //   https://www.arcgis.com/sharing/rest/portals/self?f=json&culture=ja
+        //   ※ REST APIの仕様上 self のパラメータに culture , region があるので、それを加えるリクエストにすればよい
+        //   https://developers.arcgis.com/rest/users-groups-and-items/portal-self.htm
+        // 強制的にベースマップとベースマップギャラリーを変更するために次のように culture と region 追加してリクエストをなげると英語の設定のものが戻ってきた
+        //   https://www.arcgis.com/sharing/rest/portals/self?f=json&culture=en&region=US
+        //
+        //   culture コードは language code と country code の組合せと記載されている:
+        //     https://developers.arcgis.com/rest/users-groups-and-items/common-parameters.htm
+        //   culture コードはこれで確認できます:
+        //     https://www.arcgis.com/sharing/rest/portals/languages?f=pjson
+        //   region コードはこれで確認できます:
+        //     https://www.arcgis.com/sharing/rest/portals/regions?f=pjson
+        // 以下が JavaScript リクエスト横取りしてパラメータに culture と region を設定するコード
+        const selfUrl = "https://www.arcgis.com/sharing/rest/portals/self";
+        esriConfig.request.interceptors.push({
+          urls: selfUrl,
+          before: function(params) {
+            if (params.requestOptions.query) {
+              params.requestOptions.query.culture="en";
+              params.requestOptions.query.region="US";
+            }
+          }
+        });
+        
+        // portal のインスタンスの初期化とロード
+        var portal = new Portal();
+        //　通常は自組織のportal にログインが必要なアプリがほとんど
+        // べースマップでベクター、ラスターどっちを使うかは、ログインした後の[組織] - [設定] - [マップ] - [べースマップ ギャラリー]の設定に従う。
+        // 一方、ログインなしの場合はデフォルトの設定を使う（現在はベクタータイルベースマップ）
+        // portal.authMode = "immediate"; // コメントアウト
+        
+        portal
+          .load()
+          .then(function() {
+            console.log(portal);
+            // portal.useVectorBasemaps のbool値をチェックし、
+            // デフォルトべースマップのベクターもしくはラスターかのどちらかを設定
+            var basemap = portal.useVectorBasemaps
+              ? portal.defaultVectorBasemap
+              : portal.defaultBasemap;
+            var map = new Map({
+              basemap: basemap
+            });
+            var view = new MapView({
+              container: "viewDiv",
+              map: map,
+              center: [139.715512, 35.678257], // 関東周辺
+              zoom: 8
+            });
+
+            // esriConfig.portalUrl に定義されている portal のURLを使って
+            // BasemapGallery widget で使うベースマップを決定する
+            var basemapGallery = new BasemapGallery({
+              view: view
+            });
+            var bgExpand = new Expand({
+              view: view,
+              content: basemapGallery
+            });
+            view.ui.add(bgExpand, "bottom-left");
+            // Search widget も BasemapGallery と同様に
+            // esriConfig.portalUrl に定義されている portal のURLを使って
+            // 利用するロケーターを決定する
+            var search = new Search({ view: view });
+            view.ui.add(search, "top-right");
+            
+          })
+          .catch(function(error) {
+            console.warn(error);
+          });
+      });
+    </script>
+  </head>
+  <body>
+    <div id="viewDiv"></div>
+  </body>
+</html>

@@ -20,18 +20,26 @@
   ※ 4.x 系は現在主軸の開発APIで、バージョンアップごとにパフォーマンス改善にも注力されている。4.13 -> 4.14でも GPUやWebGLのパフォーマンスが[改善](https://developers.arcgis.com/javascript/latest/guide/release-notes/)。
 
 
+## UsePortalBasemaps.html, UsePortalBasemaps_en.html
+
+  [日本語表記のベクタータイルのベースマップとギャラリーを利用するサンプルアプリ](https://kataya.github.io/js_playaround/src/UsePortalBasemaps.html)
+
+  [英語表記のベクタータイルのベースマップとギャラリーを利用するサンプルアプリ](https://kataya.github.io/js_playaround/src/UsePortalBasemaps_en.html)
+
+  ArcGIS API for JavaScript 4.x で、日本語表記/英語表記のベクター タイルベースマップとベースマップギャラリーを利用する２つのサンプルアプリ。
+
 ## CutsomBasemapGallery.html
   
-  [CutsomBasemapGallery](https://kataya.github.io/js_playaround/src/CutsomBasemapGallery.html)
+  [地理院タイル等もベースマップギャラリーから利用するサンプルアプリ](https://kataya.github.io/js_playaround/src/CutsomBasemapGallery.html)
 
-  ArcGIS API for JavaScript 4.x で、Custom BasemapGallery として、地理院タイル等をベースマップギャラリーに表示。
+  ArcGIS API for JavaScript 4.x で、Custom BasemapGallery として、地理院タイル等もベースマップギャラリーで利用するサンプルアプリ。
 
 
 ## SwipeWSMapSatellite.html
   
-  [World Street Map の Roads と Buildings を Satellite とスワイプして見るアプリ](https://kataya.github.io/js_playaround/src/SwipeWSMapSatellite.html)
+  [World Street Map の Roads と Buildings を ベースマップを切り替えながら、スワイプや透過を変更して利用するサンプルアプリ](https://kataya.github.io/js_playaround/src/SwipeWSMapSatellite.html)
 
-  ArcGIS API for JavaScript 4.x で、ベクタータイルの利点を活用し、World Street Map の Roads と Buildings のみを、Satellite とスワイプして見るアプリ。
+  ArcGIS API for JavaScript 4.x で、ベクタータイルの利点を活用し、World Street Map の Roads と Buildings のみのスタイルを利用し、Satellite や地理院タイルとスワイプして確認できるサンプルアプリ。
 
 
 ## TmsTile.html
