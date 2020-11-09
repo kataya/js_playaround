@@ -146,12 +146,13 @@ function execCalc()
   // 計算結果をUI上で表示
 　// 緯度φ
   // 経度λ
-  // 真北方向角γ ＋－が Webページでの結果と逆？
+  // 真北方向角γ ＋－が Webページでの結果と逆？ （平面直角座標系の原点X軸より東側だとマイナス、西側だとプラス）
   // 縮尺係数m
   var out = document.getElementById("divOut");
   out.innerHTML = "<p><b>計算結果</b></p>" + 
-                  "緯度φ＝" + ido + "°" + ifun + "′" + ibyou + "″，経度λ＝" + keido + "°" + keifun + "′" + keibyou + "″<br/>" + 
-                  "真北方向角γ＝" + (sgn?"－":"＋") + Math.abs(gdo) + "°" + Math.abs(gfun) + "′" + Math.abs(gbyou) + "″，縮尺係数m＝" + m + "<br/></h2>";
+                  "緯度φ＝" + ido + "°" + ifun + "′" + ibyou.toFixed(5) + "″，経度λ＝" + keido + "°" + keifun + "′" + keibyou.toFixed(5) + "″<br/>" + 
+                  "真北方向角γ＝" + (sgn?"＋":"－") + Math.abs(gdo) + "°" + Math.abs(gfun) + "′" + Math.abs(gbyou).toFixed(2) + "″，縮尺係数m＝" + m.toFixed(8) + "<br/></h2>";
+                  //"真北方向角γ＝" + (sgn?"－":"＋") + Math.abs(gdo) + "°" + Math.abs(gfun) + "′" + Math.abs(gbyou) + "″，縮尺係数m＝" + m + "<br/></h2>";
 }
 
 </script>
