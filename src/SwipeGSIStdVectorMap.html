@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>me="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>地理院地図Vector風の地図のスワイプアプリ (JS API v4.18)</title>
+  <link rel="stylesheet" href="https://js.arcgis.com/4.18/esri/themes/dark/main.css" />
+  <script src="https://js.arcgis.com/4.18/"></script>
+  <style>
+    html,
+    body,
+    #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+    
+    #footer {
+        position: absolute;
+        bottom: 20px;
+        height:100px;
+        width: 400px;
+        text-align: center;
+        padding: 10px 15px 0 15px;
+    }
+
+    #slider {
+        width: 95%;
+        padding: 0;
+        height: 60px;
+    }
+    
+    #playButton {
+        flex: 0 0 20px;
+        order: 3;
+        margin: 15px 0 0 15px;
+        left: 460px;
+    }
+
+  </style>
+  <script>
+    require([
+      "esri/Map",
+      "esri/config",
+      "esri/request",
+      "esri/Color",
+      "esri/views/MapView",
+      "esri/widgets/LayerList",
+      "esri/widgets/Swipe",
+      "esri/widgets/Expand",
+      "esri/widgets/CoordinateConversion",
+      "esri/widgets/Search",
+      "esri/widgets/Slider",
+      "esri/Basemap",
+      "esri/widgets/BasemapGallery",
+      "esri/widgets/BasemapGallery/support/LocalBasemapsSource",
+      "esri/layers/WebTileLayer",
+      "esri/layers/TileLayer",
+      "esri/layers/VectorTileLayer",
+      "esri/core/urlUtils",
+      "dojo/domReady!"
+    ], function(
+      Map,
+      esriConfig,
+      esriRequest,
+      Color,
+      MapView,
+      LayerList,
+      Swipe,
+      Expand,
+      CoordinateConversion,
+      Search,
+      Slider,
+      Basemap,
+      BasemapGallery,
+      LocalBasemapsSource,
+      WebTileLayer,
+      TileLayer,
+      VectorTileLayer,
+      urlUtils
+    ) {
+    
+    // 地理院地図Vector風の標準地図スタイルから、縮尺制限を削除
+    const vtLayer = new VectorTileLayer({
+        url: "https://kataya.github.io/gsivectortile-mapbox-gl-js/std_edit2.json",
+        opacity: 0.7
+    });
+
+    const map = new Map({
+        layers:[vtLayer] ,
+        //basemap: "topo" //"satellite" 
+        basemap: {portalItem:{id: "9e74c6647b6e41538fb3b2a4b7e90784"}} // 日本語のtopo(地形図)ベクタータイル
+    });
+
+    // map を MapView に追加
+    const view = new MapView({
+        container: "viewDiv",
+        map: map,
+        center: [139.771,35.665], // 関東周辺
+        zoom: 15,
+        constraints: { // 拡大と縮小のスケールを制限
+                minZoom: 5,
+                maxZoom: 18
+        }
+    });
+    
+    
+    // Swipe widget を作成
+    const swipe = new Swipe({
+        leadingLayers: [vtLayer],
+        //trailingLayers: [xx], //今回は未使用
+        position: 50,  // widget の位置を50％に設定
+        view: view
+    });
+
+    // widget を ui に追加
+    view.ui.add(swipe);
+     
+    // マップの座標を画面上に表示するSample の活用
+    // https://developers.arcgis.com/javascript/latest/guide/get-map-coordinates/
+    // 座標を表示するための div 要素を追加
+    const coordsWidget = document.createElement("div");
+    coordsWidget.id = "coordsWidget";
+    coordsWidget.className = "esri-widget esri-component";
+    coordsWidget.style.padding = "7px 15px 5px";
+    view.ui.add(coordsWidget, "bottom-right");
+
+    // lat, lon, zoom and scale の更新するfunction を定義
+    function showCoordinates(pt) {
+      const coords = "Lat/Lon " + pt.latitude.toFixed(4) + " " + pt.longitude.toFixed(4) + 
+          " | Scale 1:" + Math.round(view.scale * 1) / 1 +
+          " | Zoom " + view.zoom;
+      coordsWidget.innerHTML = coords;
+    }
+    
+    // view の動作がが終了したタイミングで中心座標を表示するためのイベントを追加 （例えば zoom, pan などのイベント）
+    view.watch(["stationary"], function() {
+      showCoordinates(view.center);
+    });
+
+    // クリックやムーブ時のマウスの座標を表示するためにイベントを追加
+    view.on(["pointer-down","pointer-move"], function(evt) {
+      showCoordinates(view.toMap({ x: evt.x, y: evt.y }));
+    });
+
+    // SearchWidget を ExpandWidget 内に配置
+    // https://developers.arcgis.com/javascript/latest/api-reference/esri-widgets-Expand.html
+    const search = new Search({
+　　    view: view
+    });
+    
+    const searchExpand = new Expand({
+     expandIconClass: "esri-icon-search",
+     view: view,
+     content: search
+    });
+    view.ui.add(searchExpand, "top-right");
+    
+    // ベースマップギャラリーと地理院タイルなど
+    // Esri - Topo
+    const esriTopo = new Basemap({
+        baseLayers: [new TileLayer({
+          url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer?f=json"
+        })],
+        title: "Esri - Topo",
+        id: "Topo",
+        thumbnailUrl:"https://js.arcgis.com/4.18/esri/images/basemap/topo.jpg"
+    });
+    
+    // Esri - Satellite
+    const esriSatelite = new Basemap({
+        baseLayers: [new TileLayer({
+          url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer?f=json"
+        })],
+        title: "Esri - Satellite",
+        id: "Satellite",
+        thumbnailUrl:"https://js.arcgis.com/4.18/esri/images/basemap/satellite.jpg"
+    });
+    
+    // 地理院 - 標準地図
+    const stdMap = new Basemap({
+        baseLayers:[new WebTileLayer({
+          urlTemplate: "https://cyberjapandata.gsi.go.jp/xyz/std/{level}/{col}/{row}.png",
+          copyright: "地理院タイル （https://maps.gsi.go.jp/development/ichiran.html）"
+        })],
+        title: "地理院タイル - 標準地図",
+        id: "stdmap",
+        thumbnailUrl: "https://cyberjapandata.gsi.go.jp/xyz/std/12/3637/1612.png"
+    });
+    
+    // 地理院 - 淡色地図
+    const paleMap = new Basemap({
+        baseLayers:[new WebTileLayer({
+          urlTemplate: "https://cyberjapandata.gsi.go.jp/xyz/pale/{level}/{col}/{row}.png",
+          copyright: "地理院タイル （https://maps.gsi.go.jp/development/ichiran.html）"
+        })],
+        title: "地理院タイル - 淡色地図",
+        id: "palemap",
+        thumbnailUrl: "https://cyberjapandata.gsi.go.jp/xyz/pale/12/3637/1612.png"
+    });
+    
+    // 地理院 - 写真
+    const seamlessPhoto = new Basemap({
+        baseLayers:[new WebTileLayer({
+          urlTemplate: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{level}/{col}/{row}.jpg",
+          copyright: "地理院タイル （https://maps.gsi.go.jp/development/ichiran.html）"
+        })],
+        title: "地理院タイル - 写真",
+        id: "seamlessphoto",
+        thumbnailUrl:"https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/16/58274/25716.jpg"
+    });
+    
+   const localSource = new LocalBasemapsSource({
+        basemaps: [esriTopo, esriSatelite, stdMap, paleMap, seamlessPhoto]
+    });
+    
+    // Basemap Gallery Widget
+    const basemapGallery = new BasemapGallery({
+        view: view,
+        container: document.createElement("div"),
+        source: localSource
+    });
+    
+    // Basemap Gallery Widget – Expand Button
+    const basemapGalleryExpand = new Expand({
+        view: view,
+        content: basemapGallery.domNode,
+        expandIconClass: "esri-icon-basemap"
+    });
+
+    view.ui.add(basemapGalleryExpand, {
+        position: "top-right"//"bottom-left"
+    });
+    
+    // Slider Widget
+    // https://developers.arcgis.com/javascript/latest/sample-code/layers-dynamicdatalayer-raster/index.html
+    const slider = new Slider({
+        container: "slider",
+        min: 0,
+        max: 100,
+        values: [70],
+        labelsVisible: true
+    });
+    
+    slider.on("thumb-drag", onOpacitySliderChange);
+    
+    function onOpacitySliderChange() {
+        vtLayer.opacity = slider.values[0]/100;
+    }
+    
+    const sliderExpand = new Expand({
+        view: view,
+        expandIconClass: "esri-icon-environment-settings",
+        content: footer
+    });
+    
+    view.ui.add(sliderExpand, {
+        position: "bottom-left"
+    });
+    
+    view.watch('ready', function(){
+      const attribution = view.ui._components[0];
+      attribution.widget.watch('attributionText', function(evt){ 
+        updateAttr = setInterval(function(){
+          attrdiv = document.getElementsByClassName('esri-attribution__sources')[0]
+          attrdiv.innerHTML = attribution.widget.attributionText + ", 国土地理院ベクトルタイル提供実験"
+          clearInterval(updateAttr);
+        }, 2);
+        });
+    });
+
+    // レイヤーの透過率を1%ずつ変えてアハ体験
+    var timer = null;
+    opacityStart.addEventListener("click", function() {
+        vtLayer.opacity = 0;
+        slider.viewModel.setValue(0, 0);
+        timer = setInterval(ChangeOpacity, 500);
+        console.log("start opacity timer");
+    });
+    
+    opacityEnd.addEventListener("click", function() {
+        clearInterval(timer);
+    });
+    
+    function ChangeOpacity(){
+        let curop = Number(vtLayer.opacity * 100);
+        let op = ++curop;
+        if (op <= 100){
+            vtLayer.opacity = Number(op/100).toFixed(2);
+            slider.viewModel.setValue(0, op);
+            //console.log(op);
+        }
+        else {
+            clearInterval(timer);
+            console.log("clear opacity timer");
+        }
+    }
+        
+    });
+  </script>
+</head>
+
+<body>
+  <div id="viewDiv"></div>
+  <div id="footer" class="esri-widget">
+    <div>地理院ベクトルタイル - 標準 : 透過率</span>
+        <div id="slider">
+            <div id="playButton" class="esri-widget esri-widget--button toggle-button">
+                <div id="opacityStart">
+                    <span class="toggle-button-icon esri-icon-play" aria-label="play icon"></span>
+                </div>
+                <div id="opacityEnd">
+                    <span class="toggle-button-icon esri-icon-pause" aria-label="pause icon"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+  </div>
+</body>
+
+</html>
