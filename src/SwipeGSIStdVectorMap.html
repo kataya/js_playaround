@@ -4,9 +4,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
-  <title>地理院地図Vector風の地図のスワイプアプリ (JS API v4.18)</title>
-  <link rel="stylesheet" href="https://js.arcgis.com/4.18/esri/themes/dark/main.css" />
-  <script src="https://js.arcgis.com/4.18/"></script>
+  <title>地理院地図Vector風の地図のスワイプアプリ (JS API v4.22)</title>
+  <link rel="stylesheet" href="https://js.arcgis.com/4.22/esri/themes/dark/main.css" />
+  <script src="https://js.arcgis.com/4.22/"></script>
   <style>
     html,
     body,
@@ -135,7 +135,7 @@
       coordsWidget.innerHTML = coords;
     }
     
-    // view の動作がが終了したタイミングで中心座標を表示するためのイベントを追加 （例えば zoom, pan などのイベント）
+    // view の動作が終了したタイミングで中心座標を表示するためのイベントを追加 （例えば zoom, pan などのイベント）
     view.watch(["stationary"], function() {
       showCoordinates(view.center);
     });
