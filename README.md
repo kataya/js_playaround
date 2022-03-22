@@ -5,6 +5,14 @@
 
 [src] - コードの格納先
 
+## custom-gl-tiles-tileinfo.html
+
+* [Web メルカトル のタイル情報 (LODs , Tile Rows, Tile Columuns, タイルの四隅の座標) をマップと対話的に確認できるサンプルアプリ](https://kataya.github.io/js_playaround/src/custom-gl-tiles-tileinfo.html)
+
+  XYZ タイルの格子をBaseLayerViewGL2D クラスを拡張してWebGL で描画する[実験的なサンプル](https://developers.arcgis.com/javascript/latest/sample-code/custom-gl-tiles/) を拡張し、タイル情報（id, level, row, column, xmin, ymin, xmax, ymax）の情報をテーブルで表示します。
+  Web メルカトルのxmin, ymin, xmax, ymax に対応した経度と緯度も一緒に表示します。また、マップ上でクリックした地点のWeb メルカトルのXY座標と、変換した経度と緯度の情報をポップアップ表示します。
+
+
 ## js331_drawinfo_v2.html, js414_drawinfo_v2.html
 
 * [ArcGIS API for JavaScript 3.x 系でFeuatuerLayer の描画パフォーマンス表示](https://kataya.github.io/js_playaround/src/js331_drawinfo_v2.html)
@@ -12,11 +20,16 @@
   ArcGIS API for JavaScript 3.31 で、FeuatuerLayer の描画パフォーマンスを表示するサンプルアプリ。
 
 
-* [ArcGIS API for JavaScript 4.x 系でFeuatuerLayer の描画パフォーマンス表示](https://kataya.github.io/js_playaround/src/js414_drawinfo_v2.html)
+* [ArcGIS API for JavaScript 4.x 系でFeuatuerLayer の描画パフォーマンス表示 - API 4.14](https://kataya.github.io/js_playaround/src/js414_drawinfo_v2.html)
 
   ArcGIS API for JavaScript 4.14 で、FeuatuerLayer の描画パフォーマンスを表示するサンプルアプリ。
 
   ※ 4.x 系は現在主軸の開発APIで、バージョンアップごとにパフォーマンス改善にも注力されている。4.13 -> 4.14でも GPUやWebGLのパフォーマンスが[改善](https://developers.arcgis.com/javascript/latest/guide/release-notes/)。
+
+
+* [ArcGIS API for JavaScript 4.x 系でFeuatuerLayer の描画パフォーマンス表示 - API 4.22](https://kataya.github.io/js_playaround/src/js422_drawinfo_v2.html)
+
+  ArcGIS API for JavaScript 4.22 までのバージョンアップの過程で、更にパフォーマンス改善。
 
 
 ## UsePortalBasemaps.html, UsePortalBasemaps_en.html
