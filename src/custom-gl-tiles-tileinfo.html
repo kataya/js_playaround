@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <title>
+    XYZ タイルのLODs , Tile Rows, Tile Columuns 情報とタイルの四隅座標を表示するサンプルアプリ
+    </title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix.js"></script>
+    <link rel="stylesheet" href="https://js.arcgis.com/4.22/esri/themes/light/main.css"/>
+    <script src="https://js.arcgis.com/4.22/"></script>
+
+    <style>
+    html,
+    body {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    .esri-popup--is-docked-top-right .esri-popup__main-container {
+      max-height: 100%;
+    }
+
+    #appContainer {
+      display: flex;
+      flex-direction:column;
+      height: 100%;
+      width: 100%;
+    }
+
+    #viewDiv {
+      flex: 1;
+      width: 100%;
+    }
+
+    .container {
+      display: flex;
+      flex: 1;
+      width: 100%;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 45px;
+      height: 22px;
+      vertical-align: middle;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      -webkit-transition: 0.4s;
+      transition: 0.4s;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 1px;
+      background-color: white;
+      -webkit-transition: 0.4s;
+      transition: 0.4s;
+    }
+
+    input:checked+.slider {
+      background-color: #2196f3;
+    }
+
+    input:focus+.slider {
+      box-shadow: 0 0 1px #2196f3;
+    }
+
+    input:checked+.slider:before {
+      -webkit-transform: translateX(20px);
+      -ms-transform: translateX(20px);
+      transform: translateX(20px);
+    }
+
+    /* Rounded sliders */
+
+    .slider.round {
+      border-radius: 20px;
+    }
+
+    .slider.round:before {
+      border-radius: 50%;
+    }
+
+    .labelText {
+      padding-left: 5px;
+      font-size: 15px;
+    }
+
+    #mainDiv {
+      padding: 8px;
+    }
+    
+    /* テーブルの見栄え調整 */
+    th.tiles {
+      padding: 8px;
+      background-color: #f5f5f5;
+    }
+    
+    td.tiles {
+      padding: 5px;
+    }
+
+    </style>
+
+    <script>
+    require([
+      "esri/Map",
+      "esri/Basemap",
+      "esri/views/MapView",
+      "esri/layers/Layer",
+      "esri/views/2d/layers/BaseLayerViewGL2D",
+      "esri/layers/support/TileInfo",
+      "esri/geometry/support/webMercatorUtils",
+      "esri/core/watchUtils",
+      "esri/widgets/BasemapToggle"
+    ], (Map, Basemap, MapView, Layer, BaseLayerViewGL2D, TileInfo, webMercatorUtils, watchUtils, BasemapToggle) => {
+
+    /**********************************************************************************
+    * Web メルカトルで使われている XYZ タイルの LODs , Tile Rows, Tile Columuns 情報と
+    * 各タイルの四隅の情報をマップと対話的に確認できるサンプルアプリケーションです。
+    * 
+    * 次のArcGIS API for JavaScript の Sample Code や Core concepts , API Reference を参照して作成しました
+    * 
+    * - a) Tiling support for custom WebGL layer views | Sample | ArcGIS API for JavaScript 4.22
+    *      Web メルカトルで使われている XYZ タイルの格子をBaseLayerViewGL2D クラスを拡張してWebGL で描画する実験的なサンプル
+    *      今回のアプリはこのサンプルをもとに、他の機能を追加して作成されています
+    *      https://developers.arcgis.com/javascript/latest/sample-code/custom-gl-tiles/
+    *
+    * - b) FeatureTable widget with popup interaction
+    *      FeatureTable widget を使用したテーブル表示のサンプル
+    *      今回はUI のスタイル定義 とtableContainer の表示/非表示の切り替え部分を利用しています
+    *      https://developers.arcgis.com/javascript/latest/sample-code/widgets-featuretable-popup-interaction/
+    *
+    * - c) Mercator
+    *      このサイトは、Web メルカトルと緯度経度 への変換の計算式が書かれているので、Arcade式を使った計算や他言語での計算の場合に利用可能です
+    *      https://wiki.openstreetmap.org/wiki/Mercator
+    *      今回のアプリでのWeb メルカトルから緯度経度への変換は "esri/geometry/support/webMercatorUtils" で変換して、結果をテーブルに出力しています。
+    *      https://developers.arcgis.com/javascript/latest/api-reference/esri-geometry-support-webMercatorUtils.html#xyToLngLat
+    * 
+    * - d) Watch for changes
+    *      イベントのリッスンと、プロパティの変更を監視する方法を示したサンプル
+    *      今回はプロパティの変更の監視と、マップクリックのイベント等の機能を追加するために参考にしました
+    *      https://developers.arcgis.com/javascript/latest/sample-code/watch-for-changes/
+    * 
+    * - e) Intro to widgets using BasemapToggle
+    *      BasemapToggle wigdet を使った背景地図の切り替えのサンプル
+    *      デフォルトの"satellite" と"streets-night-vector" を切り替え操作の機能を追加するために参考にしました
+    *      https://developers.arcgis.com/javascript/latest/sample-code/intro-widgets/
+    * 
+    **********************************************************************************/
+
+    const CustomLayerView2D = BaseLayerViewGL2D.createSubclass({
+        a_Position: 0,
+
+        constructor: function () {
+            // Maps from tile id to the texture used by that tile.
+            this.textures = new window.Map();
+
+            // A [x, y, width, height] rectangle that describes the
+            // position of an unrotated tile in pixels.
+            this.rect = vec4.create();
+
+            // The modelTransform is a rotation around the center
+            // of the screen; we implement it as a translation, followed
+            // by a rotation, followed by a translation back to the origin.
+            // It is used to rotate the 'rect' defined above in the vertex
+            // shader.
+            this.modelTransform = mat3.create();
+            this.modelTransformPreTranslation = mat3.create();
+            this.modelTransformRotation = mat3.create();
+            this.modelTransformPostTranslation = mat3.create();
+
+            // Transforms from pixels to normalized device coordinates.
+            this.ndcTransform = mat3.create();
+        },
+
+        attach: function () {
+            // We create and keep around a canvas and its associated 2D context.
+            // We will use it at every frame to paint the textures for newly
+            // created tiles.
+            const canvas = document.createElement("canvas");
+            canvas.width = this.layer.tileInfo.size[0];
+            canvas.height = this.layer.tileInfo.size[1];
+            const ctx = canvas.getContext("2d");
+            ctx.fillStyle = "white";
+            ctx.shadowColor = "black";
+            ctx.strokeStyle = "white";
+            ctx.shadowBlur = 3;
+            ctx.font = "20px sans-serif";
+            this.ctx = ctx;
+
+            // Creation of WebGL resources.
+            const gl = this.context;
+
+            // Create shaders.
+            const vs = gl.createShader(gl.VERTEX_SHADER);
+            gl.shaderSource(
+                vs,
+                `precision highp float;
+                attribute vec2 a_Position;
+                uniform vec4 u_Rect;
+                uniform mat3 u_ModelTransform;
+                uniform mat3 u_NDCTransform;
+                varying vec2 v_TexCoord;
+                void main(void) {
+                  vec3 transformed = u_NDCTransform * u_ModelTransform * vec3(u_Rect.xy + u_Rect.zw * a_Position, 1.0);
+                  transformed /= transformed.z;
+                  gl_Position = vec4(transformed.xy, 0.0, 1.0);
+                  v_TexCoord = a_Position;
+                }`
+            );
+            gl.compileShader(vs);
+
+            const fs = gl.createShader(gl.FRAGMENT_SHADER);
+            gl.shaderSource(
+                fs,
+                `precision highp float;
+                varying vec2 v_TexCoord;
+                uniform sampler2D u_Texture;
+                void main(void) {
+                  gl_FragColor = texture2D(u_Texture, v_TexCoord);
+                }`
+            );
+            gl.compileShader(fs);
+
+            this.program = gl.createProgram();
+            gl.attachShader(this.program, vs);
+            gl.attachShader(this.program, fs);
+            gl.bindAttribLocation(this.program, this.a_Position, "a_Position");
+            gl.linkProgram(this.program);
+            gl.deleteShader(vs);
+            gl.deleteShader(fs);
+
+            // Retrieve uniform locations.
+            this.u_Rect = gl.getUniformLocation(this.program, "u_Rect");
+            this.u_ModelTransform = gl.getUniformLocation(
+                this.program,
+                "u_ModelTransform"
+            );
+            this.u_NDCTransform = gl.getUniformLocation(
+                this.program,
+                "u_NDCTransform"
+            );
+            this.u_Texture = gl.getUniformLocation(this.program, "u_Texture");
+
+            // Create buffers. The tile is represented by a 1x1 square; the vertex shader will
+            // stretch it and position it on screen using the pixel values contained in `this.rect`.
+            this.vertexBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+            gl.bufferData(
+                gl.ARRAY_BUFFER,
+                new Uint8Array([0, 0, 1, 0, 1, 1, 0, 1]),
+                gl.STATIC_DRAW
+            );
+            this.indexBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+            gl.bufferData(
+                gl.ELEMENT_ARRAY_BUFFER,
+                new Uint16Array([0, 1, 2, 0, 2, 3]),
+                gl.STATIC_DRAW
+            );
+        },
+
+        // Creates the textures for new tiles that don't have a texture yet, and destroys the textures
+        // of tiles that are not on screen anymore.
+        manageTextures: function () {
+            const gl = this.context;
+
+            const tileIdSet = new Set();
+
+            // Create new textures as needed.
+            for (let i = 0; i < this.tiles.length; ++i) {
+                const tile = this.tiles[i];
+                tileIdSet.add(tile.id);
+              
+                if (!this.textures.has(tile.id)) {
+                    // The image is simply a border-to-border square with the tile id
+                    // in the upper-left corner of the screen. When tiled, the squares
+                    // will display as tile boundaries across the entire screen.
+                    this.ctx.clearRect(
+                        0,
+                        0,
+                        this.ctx.canvas.width,
+                        this.ctx.canvas.height
+                    );
+                    this.ctx.fillText(tile.id, 10, 24);
+                    this.ctx.strokeRect(
+                        0,
+                        0,
+                        this.ctx.canvas.width,
+                        this.ctx.canvas.height
+                    );
+                    const texture = gl.createTexture();
+                    gl.activeTexture(gl.TEXTURE0);
+                    gl.bindTexture(gl.TEXTURE_2D, texture);
+                    gl.texImage2D(
+                        gl.TEXTURE_2D,
+                        0,
+                        gl.RGBA,
+                        gl.RGBA,
+                        gl.UNSIGNED_BYTE,
+                        this.ctx.canvas
+                    );
+                    gl.texParameteri(
+                        gl.TEXTURE_2D,
+                        gl.TEXTURE_WRAP_S,
+                        gl.CLAMP_TO_EDGE
+                    );
+                    gl.texParameteri(
+                        gl.TEXTURE_2D,
+                        gl.TEXTURE_WRAP_T,
+                        gl.CLAMP_TO_EDGE
+                    );
+                    gl.texParameteri(
+                        gl.TEXTURE_2D,
+                        gl.TEXTURE_MIN_FILTER,
+                        gl.LINEAR
+                    );
+                    this.textures.set(tile.id, texture);
+                }
+            }
+          
+            // Destroys unneeded textures.
+            this.textures.forEach((_, id) => {
+                if (!tileIdSet.has(id)) {
+                    gl.deleteTexture(this.textures.get(id));
+                    this.textures.delete(id);
+                }
+            });
+          
+        },
+
+        // Example of a render implementation that draws tile boundaries
+        render: function (renderParameters) {
+            this.manageTextures();
+
+            const gl = this.context;
+
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+            gl.enableVertexAttribArray(this.a_Position);
+            gl.useProgram(this.program);
+
+            // Computes the matrices.
+            this.ndcTransform[0] = 2.0 / gl.canvas.width;
+            this.ndcTransform[3] = 0;
+            this.ndcTransform[6] = -1;
+            this.ndcTransform[1] = 0;
+            this.ndcTransform[4] = -2.0 / gl.canvas.height;
+            this.ndcTransform[7] = 1;
+            this.ndcTransform[2] = 0;
+            this.ndcTransform[5] = 0;
+            this.ndcTransform[8] = 1;
+
+            const tileSize = this.layer.tileInfo.size[0];
+            const state = renderParameters.state;
+            const pixelRatio = state.pixelRatio;
+            const width = state.size[0];
+            const height = state.size[1];
+            const coords = [0, 0];
+
+            if (state.rotation !== 0) {
+                this.modelTransformPreTranslation[0] = 1;
+                this.modelTransformPreTranslation[3] = 0;
+                this.modelTransformPreTranslation[6] = -width * pixelRatio * 0.5;
+                this.modelTransformPreTranslation[1] = 0;
+                this.modelTransformPreTranslation[4] = 1;
+                this.modelTransformPreTranslation[7] = -height * pixelRatio * 0.5;
+                this.modelTransformPreTranslation[2] = 0;
+                this.modelTransformPreTranslation[5] = 0;
+                this.modelTransformPreTranslation[8] = 1;
+
+                const rot = (state.rotation * Math.PI) / 180;
+                this.modelTransformRotation[0] = Math.cos(rot);
+                this.modelTransformRotation[3] = -Math.sin(rot);
+                this.modelTransformRotation[6] = 0;
+                this.modelTransformRotation[1] = Math.sin(rot);
+                this.modelTransformRotation[4] = Math.cos(rot);
+                this.modelTransformRotation[7] = 0;
+                this.modelTransformRotation[2] = 0;
+                this.modelTransformRotation[5] = 0;
+                this.modelTransformRotation[8] = 1;
+
+                this.modelTransformPostTranslation[0] = 1;
+                this.modelTransformPostTranslation[3] = 0;
+                this.modelTransformPostTranslation[6] = width * pixelRatio * 0.5;
+                this.modelTransformPostTranslation[1] = 0;
+                this.modelTransformPostTranslation[4] = 1;
+                this.modelTransformPostTranslation[7] = height * pixelRatio * 0.5;
+                this.modelTransformPostTranslation[2] = 0;
+                this.modelTransformPostTranslation[5] = 0;
+                this.modelTransformPostTranslation[8] = 1;
+
+                mat3.multiply(
+                    this.modelTransform,
+                    this.modelTransformRotation,
+                    this.modelTransformPreTranslation
+                );
+                mat3.multiply(
+                    this.modelTransform,
+                    this.modelTransformPostTranslation,
+                    this.modelTransform
+                );
+            } else {
+                this.modelTransform[0] = 1;
+                this.modelTransform[3] = 0;
+                this.modelTransform[6] = 0;
+                this.modelTransform[1] = 0;
+                this.modelTransform[4] = 1;
+                this.modelTransform[7] = 0;
+                this.modelTransform[2] = 0;
+                this.modelTransform[5] = 0;
+                this.modelTransform[8] = 1;
+            }
+
+            // Set per-frame states and uniforms.
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+            gl.vertexAttribPointer(
+                this.a_Position,
+                2,
+                gl.UNSIGNED_BYTE,
+                false,
+                2,
+                0
+            );
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+            gl.uniformMatrix3fv(this.u_NDCTransform, false, this.ndcTransform);
+            gl.uniformMatrix3fv(
+                this.u_ModelTransform,
+                false,
+                this.modelTransform
+            );
+
+            // Render each tile separately.
+            for (let i = 0; i < this.tiles.length; i++) {
+                // Retrieve the current tile and its associated texture.
+                const tile = this.tiles[i];
+                const texture = this.textures.get(tile.id);
+
+                // Derive the screen `rect` for this tile.
+                const screenScale =
+                  (tile.resolution / state.resolution) * pixelRatio;
+                state.toScreenNoRotation(coords, tile.coords);
+                this.rect[0] = coords[0];
+                this.rect[1] = coords[1];
+                this.rect[2] = tileSize * screenScale;
+                this.rect[3] = tileSize * screenScale;
+
+                // Set per-tile uniforms and states.
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, texture);
+                gl.uniform4fv(this.u_Rect, this.rect);
+                gl.uniform1i(this.u_Texture, 0);
+
+                // Draw the tile.
+                gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+            }
+            
+
+          },
+
+        // Destroy the shader program, the buffers and all the tile textures.
+        detach: function () {
+            const gl = this.context;
+
+            gl.deleteProgram(this.program);
+            gl.deleteBuffer(this.vertexBuffer);
+            gl.deleteBuffer(this.indexBuffer);
+
+            this.textures.forEach((_, id) => {
+                gl.deleteTexture(this.textures.get(id));
+                this.textures.delete(id);
+            });
+        },
+
+        // Required when using tiling; this methods is called every time that `this.tiles`
+        // changes, to give the derived class a chance to perform per-tile work as needed;
+        // This is where, for instance, tile data could be fetched from a server.
+        // `this.tiles` が変更されたときに呼ばれるので、ここでcurTiles テーブルに表示するタイル情報を格納
+        tilesChanged: function () {
+            //console.log("tilesChanged");
+            //
+            // this.tiles はTile オブジェクトのArray 
+            // Tile オブジェクトは以下のHelpにあるように、
+            // https://developers.arcgis.com/javascript/latest/api-reference/esri-views-2d-layers-BaseLayerViewGL2D.html#Tile
+            // tile.id は次を"/"で区切りで連ねた文字列
+            //   tile.level
+            //   tile.row
+            //   tile.col
+            //   tile.world
+            // tile.bounds はArray でタイルの4端の座標が入っている
+            //    (xmin, ymin, xmax, ymax)
+            // 他にも resolution, scale, coords などのプロパティもある
+            // 
+            // ログには次のように例のように表示される
+            // id: 1/1/1/-1 ; bounds: -0.000002983957529067993,-20037508.342781033,20037508.342781033,0.000002983957529067993
+            // id: 1/0/1/-1 ; bounds: -0.000002983957529067993,0.000002983957529067993,20037508.342781033,20037508.342787
+            // for (let i = 0; i < this.tiles.length; ++i){
+            //   console.log("id: " + tile.id + " ; bounds: " + tile.bounds.toString())
+            // }
+            
+            curTiles = this.tiles; // 一覧表示用にthis.tilesの情報を格納
+            
+        }
+    });
+
+
+    const CustomLayer = Layer.createSubclass({
+        // We want to take advantage of the tiling capabilities of BaseLayerViewGL2D.
+        tileInfo: TileInfo.create({
+            size: 512,
+            spatialReference: { wkid: 3857 }
+        }),
+
+        createLayerView: function (view) {
+            if (view.type === "2d") {
+                return new CustomLayerView2D({
+                  view: view,
+                  layer: this
+                });
+            }
+        }
+    });
+
+    const layer = new CustomLayer();
+
+    const map = new Map({
+        basemap: "satellite",
+        layers: [layer]
+    });
+
+    const view = new MapView({
+        container: "viewDiv",
+        map: map,
+        // 皇居周辺のmesh.id = 12/1612/3638/0 がアプリの初期表示で表示されるよう調整
+        zoom : 13, //12
+        center : [139.8003972,35.7165044]  //[139.7683972,35.7265044]
+        //zoom: 5,
+        //center: [-100, 40]
+    });
+    
+    /**********************************************************************************
+    * BasemapToggle widget でベースマップを切り替えする機能を追加
+    * 単純に well known id "streets-night-vector" でbasemap を指定すると英語地図に
+    * なってしまうのでbasemapのid を指定して追加
+    * 以下でクエリした一覧に日本語ベクタータイルが含まれる：
+    *   https://www.arcgis.com/home/user.html?user=Esri_cy_JP
+    **********************************************************************************/
+    const toggle = new BasemapToggle({
+        view: view,
+        //nextBasemap:"streets-night-vector"
+        nextBasemap: new Basemap(
+                {portalItem: {id: "ee3092a72f464186b6a192e82819d438"}}
+            ) // streets-night-vector 日本語版
+    });
+
+    view.ui.add(toggle, "bottom-left")
+
+
+    /**********************************************************************************
+    * tableContainer の表示/非表示の切り替え用に追加
+    **********************************************************************************/
+    let tableDiv;
+    let curTiles = []; // 一覧表示用にthis.tilesの情報をtilesに格納
+
+    view.when(() => {
+        view.whenLayerView(layer).then((layerView) => {
+          // Get references to div elements for toggling table visibility
+          const appContainer = document.getElementById("appContainer");
+          const tableContainer = document.getElementById("tableContainer");
+          //const tableDiv = document.getElementById("tableDiv");
+          tableDiv = document.getElementById("tableDiv");
+
+          // Add toggle visibility slider
+          view.ui.add(document.getElementById("mainDiv"), "top-right");
+
+          // Get reference to div elements
+          const checkboxEle = document.getElementById("checkboxId");
+          const labelText = document.getElementById("labelText");
+
+          // Listen for when toggle is changed, call toggleFeatureTable function
+          checkboxEle.onchange = () => {
+            toggleFeatureTable();
+          };
+
+          function toggleFeatureTable() {
+            // Check if the table is displayed, if so, toggle off. If not, display.
+            if (!checkboxEle.checked) {
+              appContainer.removeChild(tableContainer);
+              labelText.innerHTML = "Show Table";
+            } else {
+              appContainer.appendChild(tableContainer);
+              labelText.innerHTML = "Hide Table";
+            }
+          }
+          
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+
+    });
+        
+    /**********************************************************************************
+    * Tiles の情報ともとにHTMLTableを作成する処理を関数化
+    * ＋ここにWebメルカトルの座標値を経度緯度へ変換してテーブルに追加も追加
+    **********************************************************************************/
+    function createTilesHtmTable(tiles){
+        const tbl = document.createElement("table");
+        //<table border="1" style="border-collapse: collapse">
+        tbl.border = "1";
+        tbl.setAttribute("style", "border-collapse: collapse");
+        tbl.setAttribute("id","tiles");
+        
+        const tblHead = document.createElement("thead");
+        const tblBody = document.createElement("tbody");
+
+        // ヘッダーを作成
+        //<thead>
+        //  <tr>
+        //    <th>id</th>
+        //    <th>xmin</th>
+        //     省略
+        //  </tr>
+        //</thead>
+        const hrow = document.createElement("tr");
+        // id
+        let head = document.createElement("th");
+        head.className += "tiles";
+        head.innerHTML = "id";
+        hrow.appendChild(head);
+        // level, row, col
+        head = document.createElement("th");
+        head.className += "tiles";
+        head.innerHTML = "level";
+        hrow.appendChild(head);
+        head = document.createElement("th");
+        head.className += "tiles";
+        head.innerHTML = "row";
+        hrow.appendChild(head);
+        head = document.createElement("th");
+        head.className += "tiles";
+        head.innerHTML = "col";
+        hrow.appendChild(head);
+        // xmin, ymin, xmax, ymax
+        head = document.createElement("th");
+        head.className += "tiles";
+        head.innerHTML = "xmin";
+        hrow.appendChild(head);
+        head = document.createElement("th");
+        head.className += "tiles";
+        head.innerHTML = "ymin";
+        hrow.appendChild(head);
+        head = document.createElement("th");
+        head.className += "tiles";
+        head.innerHTML = "xmax";
+        hrow.appendChild(head);
+        head = document.createElement("th");
+        head.className += "tiles";
+        head.innerHTML = "ymax";
+        hrow.appendChild(head);
+        // lon_min, lat_min, lon_max, lat_max
+        head = document.createElement("th");
+        head.className += "tiles";
+        head.innerHTML = "longitude_min";
+        hrow.appendChild(head);
+        head = document.createElement("th");
+        head.className += "tiles";
+        head.innerHTML = "latitude_min";
+        hrow.appendChild(head);
+        head = document.createElement("th");
+        head.className += "tiles";
+        head.innerHTML = "longitude_max";
+        hrow.appendChild(head);
+        head = document.createElement("th");
+        head.className += "tiles";
+        head.innerHTML = "latitude_max";
+        hrow.appendChild(head);
+        
+        tblHead.appendChild(hrow);
+        tbl.appendChild(tblHead);
+        
+        // レコードを作成
+        //<tbody>
+        //  <tr>
+        //    <td>id_value</td>
+        //    <td>xmin_value</td>
+        //     省略
+        //  </tr>
+        //</tbody>
+        for (let i = 0; i < tiles.length; ++i){
+            const tile = tiles[i];
+            // id
+            const row = document.createElement("tr");
+            data = document.createElement("td");
+            data.className += "tiles";
+            data.innerHTML = tile.id;
+            row.appendChild(data);
+            // level, row, col
+            data = document.createElement("td");
+            data.className += "tiles";
+            data.innerHTML = tile.level;
+            row.appendChild(data);
+            data = document.createElement("td");
+            data.className += "tiles";
+            data.innerHTML = tile.row;
+            row.appendChild(data);
+            data = document.createElement("td");
+            data.className += "tiles";
+            data.innerHTML = tile.col;
+            row.appendChild(data);
+            // xmin, ymin, xmax, ymax
+            data = document.createElement("td");
+            data.className += "tiles";
+            data.innerHTML = tile.bounds[0].toFixed(8);
+            row.appendChild(data);
+            data = document.createElement("td");
+            data.className += "tiles";
+            data.innerHTML = tile.bounds[1].toFixed(8);
+            row.appendChild(data);
+            data = document.createElement("td");
+            data.className += "tiles";
+            data.innerHTML = tile.bounds[2].toFixed(8);
+            row.appendChild(data);
+            data = document.createElement("td");
+            data.className += "tiles";
+            data.innerHTML = tile.bounds[3].toFixed(8);
+            row.appendChild(data);
+            // lon_min, lat_min, lon_max, lat_max
+            const lonlat_min = webMercatorUtils.xyToLngLat(tile.bounds[0], tile.bounds[1]);
+            const lonlat_max = webMercatorUtils.xyToLngLat(tile.bounds[2], tile.bounds[3]);
+            data = document.createElement("td");
+            data.className += "tiles";
+            data.innerHTML = lonlat_min[0].toFixed(8);
+            row.appendChild(data);
+            data = document.createElement("td");
+            data.className += "tiles";
+            data.innerHTML = lonlat_min[1].toFixed(8);
+            row.appendChild(data);
+            data = document.createElement("td");
+            data.className += "tiles";
+            data.innerHTML = lonlat_max[0].toFixed(8);
+            row.appendChild(data);
+            data = document.createElement("td");
+            data.className += "tiles";
+            data.innerHTML = lonlat_max[1].toFixed(8);
+            row.appendChild(data);
+            
+            tblBody.appendChild(row);
+        }
+        tbl.appendChild(tblBody);
+        return tbl;
+    }
+
+    /**********************************************************************************
+    * watchUtils()でプロパティの変更を監視し、
+    * view の"stationary" がtrue になったときにtiles の情報をテーブルにする処理を追加
+    **********************************************************************************/
+    //"stationary" がtrue になったときに呼ばれるコールバック関数を定義
+    function currentTiles(){
+        // tableDiv にタイルの情報を表示
+        // curTiles(= this.tiles) をもとにHTMLTableを作成
+        if (curTiles.length > 0) {
+            const tbl = createTilesHtmTable(curTiles);
+            //console.log(tbl);
+            // tableDiv にHTMLTable を適用
+            tableDiv.innerHTML = tbl.outerHTML;
+        }
+    }
+
+    /**********************************************************************************
+    * watchUtils()でプロパティの変更を監視
+    * Watch view's stationary property for becoming true.
+    * https://developers.arcgis.com/javascript/latest/api-reference/esri-core-watchUtils.html#whenTrue
+    *   第一引数：プロパティの変更を監視する対象オブジェクト
+    *   第二引数：プロパティ名（文字列）を指定
+    *   第三引数：プロパティが変更されたときに呼ばれるコールバック関数を指定
+    **********************************************************************************/
+    watchUtils.whenTrue(view, "stationary", currentTiles);
+
+
+    /**********************************************************************************
+    * クリック地点のXYとLonLat座標をもとにEsriのclass を使ったポップアップ用HTMLTableを作成
+    * 
+    * 標準のPopupTemplateのテーブル要素の例
+    * <table class="esri-widget__table">
+    *   <tbody>
+    *     <tr>
+    *        <th class="esri-feature-fields__field-header">X</th>
+    *        <td class="esri-feature-fields__field-data">‎15546680.05697153</td>
+    *     </tr>
+    *     <tr>
+    *        <th class="esri-feature-fields__field-header">Y</th>
+    *        <td class="esri-feature-fields__field-data">‎4265797.67454099</td>
+    *     </tr>
+    *      ～省略～
+    *    </tbody>
+    * </table>
+    **********************************************************************************/
+    function createPopupHtmlTable(x, y, lon, lat){
+        const tbl = document.createElement("table");
+        tbl.className = "esri-widget__table";
+        const tblBody = document.createElement("tbody");
+
+        let x_row = document.createElement("tr");
+        let x_heading = document.createElement("th");
+        x_heading.className = "esri-feature-fields__field-header";
+        x_heading.innerHTML = "X";
+        let x_data = document.createElement("td");
+        x_data.className = "esri-feature-fields__field-data";
+        x_data.innerHTML = x;
+        x_row.appendChild(x_heading);
+        x_row.appendChild(x_data);
+        tblBody.appendChild(x_row);
+
+        let y_row = document.createElement("tr");
+        let y_heading = document.createElement("th");
+        y_heading.className = "esri-feature-fields__field-header";
+        y_heading.innerHTML = "Y";
+        let y_data = document.createElement("td");
+        y_data.className = "esri-feature-fields__field-data";
+        y_data.innerHTML = y;
+        y_row.appendChild(y_heading);
+        y_row.appendChild(y_data);
+        tblBody.appendChild(y_row);
+
+        let lon_row = document.createElement("tr");
+        let lon_heading = document.createElement("th");
+        lon_heading.className = "esri-feature-fields__field-header";
+        lon_heading.innerHTML = "longitude";
+        let lon_data = document.createElement("td");
+        lon_data.className = "esri-feature-fields__field-data";
+        lon_data.innerHTML = lon;
+        lon_row.appendChild(lon_heading);
+        lon_row.appendChild(lon_data);
+        tblBody.appendChild(lon_row);
+
+        let lat_row = document.createElement("tr");
+        let lat_heading = document.createElement("th");
+        lat_heading.className = "esri-feature-fields__field-header";
+        lat_heading.innerHTML = "latitude";
+        let lat_data = document.createElement("td");
+        lat_data.className = "esri-feature-fields__field-data";
+        lat_data.innerHTML = lat;
+        lat_row.appendChild(lat_heading);
+        lat_row.appendChild(lat_data);
+        tblBody.appendChild(lat_row);
+
+        tbl.appendChild(tblBody);
+        return tbl;
+    }
+
+    /**********************************************************************************
+    // マウスクリックでポップアップに座標を表示
+    //https://developers.arcgis.com/javascript/latest/api-reference/esri-views-View.html#event-click
+    **********************************************************************************/
+    view.on("click", (event) =>{
+
+        // you must overwrite default click-for-popup
+        // behavior to display your own popup
+        view.popup.autoOpenEnabled = false;
+        
+          // Get the coordinates of the click on the view
+        let lat = event.mapPoint.latitude;
+        let lon = event.mapPoint.longitude;
+        let xy = webMercatorUtils.lngLatToXY(lon, lat);
+
+        view.popup.open({
+            // Set the popup's title to the coordinates of the location
+            title: "クリック地点の座標: [" + lon.toFixed(3) + ", " + lat.toFixed(3) + "]",
+            location: event.mapPoint, // Set the location of the popup to the clicked location
+            //content: "XY: [" + xy[0].toFixed(8) + "," + xy[1].toFixed(8) + "]"
+            content: createPopupHtmlTable(xy[0].toFixed(8), xy[1].toFixed(8), lon.toFixed(8), lat.toFixed(8))
+        });
+        
+    });
+
+
+    });
+    </script>
+</head>
+
+<body>
+    <div id="appContainer">
+        <div id="viewDiv"></div>
+        <div id="tableContainer" class="container">
+            <div id="tableDiv"></div>
+        </div>
+        <div id="mainDiv" class="esri-widget">
+            <label class="switch">
+                <input id="checkboxId" type="checkbox" checked="yes" />
+                <span class="slider round"></span>
+            </label>
+            <label class="labelText" id="labelText">Hide Table</label>
+        </div>
+    </div>
+</body>
+</html>
