@@ -11,8 +11,10 @@
 
   XYZ タイルの格子をBaseLayerViewGL2D クラスを拡張してWebGL で描画する[実験的なサンプル](https://developers.arcgis.com/javascript/latest/sample-code/custom-gl-tiles/) を拡張し、タイル情報（id, level, row, column, xmin, ymin, xmax, ymax）の情報をテーブルで表示します。
   Web メルカトルのxmin, ymin, xmax, ymax に対応した経度と緯度も一緒に表示します。また、マップ上でクリックした地点のWeb メルカトルのXY座標と、変換した経度と緯度の情報をポップアップ表示します。
-
-
+  
+  ![custom-gl-tiles-tileinfo](https://github.com/kataya/js_playaround/blob/branch-image/images/app_custom-gl-tiles-tileinfo.png?raw=true)
+  
+  
 ## js331_drawinfo_v2.html, js414_drawinfo_v2.html, js22_drawinfo_v2.html
 
 * [ArcGIS API for JavaScript 3.x 系でFeuatuerLayer の描画パフォーマンス表示](https://kataya.github.io/js_playaround/src/js331_drawinfo_v2.html)
@@ -31,15 +33,20 @@
 
   ArcGIS API for JavaScript 4.22 までのバージョンアップの過程で、更にパフォーマンス改善。
 
+  
+  ![js422_drawinfo_v2](https://github.com/kataya/js_playaround/blob/branch-image/images/app_js4x_drawinfo.png?raw=true)
+  
 
 ## UsePortalBasemaps.html, UsePortalBasemaps_en.html
 
 * [日本語表記のベクタータイルのベースマップとギャラリーを利用するサンプルアプリ](https://kataya.github.io/js_playaround/src/UsePortalBasemaps.html)
 
 * [英語表記のベクタータイルのベースマップとギャラリーを利用するサンプルアプリ](https://kataya.github.io/js_playaround/src/UsePortalBasemaps_en.html)
-
+  
   ArcGIS API for JavaScript 4.x で、日本語表記/英語表記のベクター タイルベースマップとベースマップギャラリーを利用する２つのサンプルアプリ。
 
+  ![UsePortalBasemaps_en](https://github.com/kataya/js_playaround/blob/branch-image/images/app_UsePortalBasemaps_en.png?raw=true)
+  
 ## CutsomBasemapGallery.html
   
 * [地理院タイル等もベースマップギャラリーから利用するサンプルアプリ](https://kataya.github.io/js_playaround/src/CutsomBasemapGallery.html)
@@ -59,7 +66,7 @@
 * [地理院地図Vector風の標準地図 を ベースマップを切り替えながら、スワイプや透過を変更して利用するサンプルアプリ](https://kataya.github.io/js_playaround/src/SwipeGSIStdVectorMap.html)
 
   ArcGIS API for JavaScript 4.18 から Expression式　などAPIで非対応だったベクタータイルのスタイルに対応したため、地理院地図Vectorの標準地図 と、Satellite や地理院タイルとスワイプして確認できるサンプルアプリ。遊びでレイヤーの透過率を1%ずつ変更して、アハ体験ができる機能も追加してみました。
-
+  ![SwipeGSIStdVectorMap](https://github.com/kataya/js_playaround/blob/branch-image/images/app_SwipeGSIStdVectorMap.png?raw=true)
 
 ## TmsTile.html
 
