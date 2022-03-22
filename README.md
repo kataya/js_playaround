@@ -13,7 +13,7 @@
   Web メルカトルのxmin, ymin, xmax, ymax に対応した経度と緯度も一緒に表示します。また、マップ上でクリックした地点のWeb メルカトルのXY座標と、変換した経度と緯度の情報をポップアップ表示します。
 
 
-## js331_drawinfo_v2.html, js414_drawinfo_v2.html
+## js331_drawinfo_v2.html, js414_drawinfo_v2.html, js22_drawinfo_v2.html
 
 * [ArcGIS API for JavaScript 3.x 系でFeuatuerLayer の描画パフォーマンス表示](https://kataya.github.io/js_playaround/src/js331_drawinfo_v2.html)
 
