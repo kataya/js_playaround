@@ -2,15 +2,10 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="initial-scale=1,maximum-scale=1,user-scalable=no"
-    />
-    <title>ArcGIS API for JavaScript 4.14 - FeatureLayer : drawinfo_v2</title>
-
-    <link rel="stylesheet" href="https://js.arcgis.com/4.14/esri/themes/light/main.css" />
-      
-    <script src="https://js.arcgis.com/4.14/"></script>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no"/>
+    <title>ArcGIS API for JavaScript 4.22 - FeatureLayer : drawinfo_v2</title>
+    <link rel="stylesheet" href="https://js.arcgis.com/4.22/esri/themes/light/main.css" />
+    <script src="https://js.arcgis.com/4.22/"></script>
 
     <style>
       html,
@@ -119,6 +114,7 @@
             calcFeatures();
         }
         
+        
         function clearCount() {
            document.getElementById("polyinfo").innerHTML = '';
            document.getElementById("ptinfo").innerHTML =   '';
@@ -146,7 +142,8 @@
             });
         }
         
-        watchUtils.whenTrue(view, "updating", 
+        
+       watchUtils.whenTrue(view, "updating", 
           function(value){
             start();
           }
