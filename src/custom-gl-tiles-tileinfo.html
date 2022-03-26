@@ -622,7 +622,90 @@
         });
 
     });
-        
+    
+    /**********************************************************************************
+    * Tiles の情報ともとにHTMLTableを作成する処理を関数化 その２
+    * ※「Back To The Basics: How To Generate a Table With JavaScript」を参考に改修したもの
+    *   https://www.valentinog.com/blog/html-table/
+    * ＋ここにWebメルカトルの座標値を経度緯度へ変換してテーブルに追加も追加
+    **********************************************************************************/
+    function _generateTableHead(table, data){
+        let thead = table.createTHead();
+        let row = thead.insertRow();
+        for (let key of data){
+            let th = document.createElement("th");
+            th.className += "tiles";
+            let text = document.createTextNode(key);
+            th.appendChild(text);
+            row.appendChild(th);
+        }
+    }
+    function _generateTableRow(row, tileval){
+        let data = row.insertCell();
+        data.className += "tiles";
+        data.innerHTML = tileval;
+        row.appendChild(data);
+    }
+    function _generateTable(table, tiles) {
+        for (let i = 0; i < tiles.length; ++i){
+            let row = table.insertRow();
+            const tile = tiles[i];
+            // id
+            _generateTableRow(row, tile.id);
+            // level, row, col
+            _generateTableRow(row, tile.level);
+            _generateTableRow(row, tile.row);
+            _generateTableRow(row, tile.col);
+            // xmin, ymin, xmax, ymax
+            _generateTableRow(row, tile.bounds[0].toFixed(8));
+            _generateTableRow(row, tile.bounds[1].toFixed(8));
+            _generateTableRow(row, tile.bounds[2].toFixed(8));
+            _generateTableRow(row, tile.bounds[3].toFixed(8));
+            // lon_min, lat_min, lon_max, lat_max
+            const lonlat_min = webMercatorUtils.xyToLngLat(tile.bounds[0], tile.bounds[1]);
+            const lonlat_max = webMercatorUtils.xyToLngLat(tile.bounds[2], tile.bounds[3]);
+            _generateTableRow(row, lonlat_min[0].toFixed(8));
+            _generateTableRow(row, lonlat_min[1].toFixed(8));
+            _generateTableRow(row, lonlat_max[0].toFixed(8));
+            _generateTableRow(row, lonlat_max[1].toFixed(8));
+        }
+    }
+    function createTilesHtmTable2(tiles){
+        const tbl = document.createElement("table");
+        //<table border="1" style="border-collapse: collapse">
+        tbl.border = "1";
+        tbl.setAttribute("style", "border-collapse: collapse");
+        tbl.setAttribute("id","tiles");
+
+        // https://www.valentinog.com/blog/html-table/ に書いてあるように
+        // 呼び出し順を変更すると<thead>と<tbody> がテーブルに追加される
+
+        // レコードを作成
+        //<tbody>
+        //  <tr>
+        //    <td>id_value</td>
+        //    <td>xmin_value</td>
+        //     省略
+        //  </tr>
+        //</tbody>
+        _generateTable(tbl, tiles);
+
+        // ヘッダーを作成
+        //<thead>
+        //  <tr>
+        //    <th>id</th>
+        //    <th>xmin</th>
+        //     省略
+        //  </tr>
+        //</thead>
+        let head_data = ['id','level','row','col',
+                         'xmin','ymin','xmax','ymax',
+                         'lon_min','lat_min','lon_max','lat_max']
+        _generateTableHead(tbl, head_data);
+
+        return tbl;
+    }
+
     /**********************************************************************************
     * Tiles の情報ともとにHTMLTableを作成する処理を関数化
     * ＋ここにWebメルカトルの座標値を経度緯度へ変換してテーブルに追加も追加
@@ -714,7 +797,7 @@
             const tile = tiles[i];
             // id
             const row = document.createElement("tr");
-            data = document.createElement("td");
+            let data = document.createElement("td");
             data.className += "tiles";
             data.innerHTML = tile.id;
             row.appendChild(data);
@@ -771,6 +854,7 @@
             tblBody.appendChild(row);
         }
         tbl.appendChild(tblBody);
+
         return tbl;
     }
 
@@ -783,7 +867,7 @@
         // tableDiv にタイルの情報を表示
         // curTiles(= this.tiles) をもとにHTMLTableを作成
         if (curTiles.length > 0) {
-            const tbl = createTilesHtmTable(curTiles);
+            const tbl = createTilesHtmTable2(curTiles); //createTilesHtmTable(curTiles); 
             //console.log(tbl);
             // tableDiv にHTMLTable を適用
             tableDiv.innerHTML = tbl.outerHTML;
@@ -819,56 +903,78 @@
     *    </tbody>
     * </table>
     **********************************************************************************/
+    function _generatePopupTableBody(table, obj){
+        let tblBody = table.createTBody();
+        for(let key in obj){
+            //console.log(key + ': ' + obj[key] );
+            let row = table.insertRow();
+            let heading = document.createElement("th");
+            heading.className = "esri-feature-fields__field-header";
+            heading.innerHTML = key;
+            let data = document.createElement("td");
+            data.className = "esri-feature-fields__field-data";
+            data.innerHTML = obj[key];
+            row.appendChild(heading);
+            row.appendChild(data);
+            tblBody.appendChild(row);
+        }
+        table.appendChild(tblBody);
+    }
     function createPopupHtmlTable(x, y, lon, lat){
         const tbl = document.createElement("table");
         tbl.className = "esri-widget__table";
-        const tblBody = document.createElement("tbody");
+        //const tblBody = document.createElement("tbody");
 
-        let x_row = document.createElement("tr");
-        let x_heading = document.createElement("th");
-        x_heading.className = "esri-feature-fields__field-header";
-        x_heading.innerHTML = "X";
-        let x_data = document.createElement("td");
-        x_data.className = "esri-feature-fields__field-data";
-        x_data.innerHTML = x;
-        x_row.appendChild(x_heading);
-        x_row.appendChild(x_data);
-        tblBody.appendChild(x_row);
+        // オブジェクトを使った方式に変更
+        const data_obj = {"X":x, "Y":y ,"longitude":lon , "latitude":lat }
+        _generatePopupTableBody(tbl, data_obj);
 
-        let y_row = document.createElement("tr");
-        let y_heading = document.createElement("th");
-        y_heading.className = "esri-feature-fields__field-header";
-        y_heading.innerHTML = "Y";
-        let y_data = document.createElement("td");
-        y_data.className = "esri-feature-fields__field-data";
-        y_data.innerHTML = y;
-        y_row.appendChild(y_heading);
-        y_row.appendChild(y_data);
-        tblBody.appendChild(y_row);
+        // let x_row = document.createElement("tr");
+        // let x_heading = document.createElement("th");
+        // x_heading.className = "esri-feature-fields__field-header";
+        // x_heading.innerHTML = "X";
+        // let x_data = document.createElement("td");
+        // x_data.className = "esri-feature-fields__field-data";
+        // x_data.innerHTML = x;
+        // x_row.appendChild(x_heading);
+        // x_row.appendChild(x_data);
+        // tblBody.appendChild(x_row);
 
-        let lon_row = document.createElement("tr");
-        let lon_heading = document.createElement("th");
-        lon_heading.className = "esri-feature-fields__field-header";
-        lon_heading.innerHTML = "longitude";
-        let lon_data = document.createElement("td");
-        lon_data.className = "esri-feature-fields__field-data";
-        lon_data.innerHTML = lon;
-        lon_row.appendChild(lon_heading);
-        lon_row.appendChild(lon_data);
-        tblBody.appendChild(lon_row);
+        // let y_row = document.createElement("tr");
+        // let y_heading = document.createElement("th");
+        // y_heading.className = "esri-feature-fields__field-header";
+        // y_heading.innerHTML = "Y";
+        // let y_data = document.createElement("td");
+        // y_data.className = "esri-feature-fields__field-data";
+        // y_data.innerHTML = y;
+        // y_row.appendChild(y_heading);
+        // y_row.appendChild(y_data);
+        // tblBody.appendChild(y_row);
 
-        let lat_row = document.createElement("tr");
-        let lat_heading = document.createElement("th");
-        lat_heading.className = "esri-feature-fields__field-header";
-        lat_heading.innerHTML = "latitude";
-        let lat_data = document.createElement("td");
-        lat_data.className = "esri-feature-fields__field-data";
-        lat_data.innerHTML = lat;
-        lat_row.appendChild(lat_heading);
-        lat_row.appendChild(lat_data);
-        tblBody.appendChild(lat_row);
+        // let lon_row = document.createElement("tr");
+        // let lon_heading = document.createElement("th");
+        // lon_heading.className = "esri-feature-fields__field-header";
+        // lon_heading.innerHTML = "longitude";
+        // let lon_data = document.createElement("td");
+        // lon_data.className = "esri-feature-fields__field-data";
+        // lon_data.innerHTML = lon;
+        // lon_row.appendChild(lon_heading);
+        // lon_row.appendChild(lon_data);
+        // tblBody.appendChild(lon_row);
 
-        tbl.appendChild(tblBody);
+        // let lat_row = document.createElement("tr");
+        // let lat_heading = document.createElement("th");
+        // lat_heading.className = "esri-feature-fields__field-header";
+        // lat_heading.innerHTML = "latitude";
+        // let lat_data = document.createElement("td");
+        // lat_data.className = "esri-feature-fields__field-data";
+        // lat_data.innerHTML = lat;
+        // lat_row.appendChild(lat_heading);
+        // lat_row.appendChild(lat_data);
+        // tblBody.appendChild(lat_row);
+
+        // tbl.appendChild(tblBody);
+
         return tbl;
     }
 
