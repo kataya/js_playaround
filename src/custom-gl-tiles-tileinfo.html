@@ -4,11 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
     <title>
-    XYZ タイルのLODs , Tile Rows, Tile Columuns 情報とタイルの四隅座標を表示するサンプルアプリ
+    XYZ タイル のLODs(z), Tile Columuns(x), Tile Rows(y) の情報や座標を表示するサンプルアプリ
     </title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix.js"></script>
-    <link rel="stylesheet" href="https://js.arcgis.com/4.22/esri/themes/light/main.css"/>
-    <script src="https://js.arcgis.com/4.22/"></script>
+    <link rel="stylesheet" href="https://js.arcgis.com/4.24/esri/themes/light/main.css"/>
+    <script src="https://js.arcgis.com/4.24/"></script>
 
     <style>
     html,
@@ -35,12 +35,32 @@
       width: 100%;
     }
 
+
+    /* テーブルの見出しを固定し縦スクロール可能なように変更 */
     .container {
       display: flex;
-      flex: 1;
+      overflow: auto;
+      height: 40%;
+    }
+    table.tiles {
       width: 100%;
     }
-
+    /* テーブルの見栄え調整 */
+    th.tiles {
+      padding: 8px;
+      background-color: #f5f5f5;
+      
+      position: sticky;
+      top: 0;
+      left: 0;
+    }
+    td.tiles {
+      padding: 5px;
+    }
+    td.tiles:hover {
+      background-color: #C5A23B40;
+    }
+    
     .switch {
       position: relative;
       display: inline-block;
@@ -94,7 +114,6 @@
     }
 
     /* Rounded sliders */
-
     .slider.round {
       border-radius: 20px;
     }
@@ -112,15 +131,6 @@
       padding: 8px;
     }
     
-    /* テーブルの見栄え調整 */
-    th.tiles {
-      padding: 8px;
-      background-color: #f5f5f5;
-    }
-    
-    td.tiles {
-      padding: 5px;
-    }
 
     </style>
 
@@ -130,18 +140,21 @@
       "esri/Basemap",
       "esri/views/MapView",
       "esri/layers/Layer",
-      "esri/views/2d/layers/BaseLayerViewGL2D",
+      "esri/layers/WebTileLayer",
       "esri/layers/support/TileInfo",
+      "esri/views/2d/layers/BaseLayerViewGL2D",
       "esri/geometry/support/webMercatorUtils",
-      "esri/core/watchUtils",
-      "esri/widgets/BasemapToggle"
-    ], (Map, Basemap, MapView, Layer, BaseLayerViewGL2D, TileInfo, webMercatorUtils, watchUtils, BasemapToggle) => {
+      "esri/core/reactiveUtils",
+      "esri/widgets/BasemapToggle",
+      "esri/Graphic"
+    ], (Map, Basemap, MapView, Layer, WebTileLayer, TileInfo, BaseLayerViewGL2D, webMercatorUtils,
+        reactiveUtils, BasemapToggle, Graphic) => {
 
     /**********************************************************************************
-    * Web メルカトルで使われている XYZ タイルの LODs , Tile Rows, Tile Columuns 情報と
+    * Web メルカトルで使われている XYZ タイル のLODs(z), Tile Columuns(x), Tile Rows(y) の情報と
     * 各タイルの四隅の情報をマップと対話的に確認できるサンプルアプリケーションです。
     * 
-    * 次のArcGIS API for JavaScript の Sample Code や Core concepts , API Reference を参照して作成しました
+    * 次のArcGIS API for JavaScript の Sample Code や Core concepts , API Reference , Slippy map tilenames を参照して作成しました
     * 
     * - a) Tiling support for custom WebGL layer views | Sample | ArcGIS API for JavaScript 4.22
     *      Web メルカトルで使われている XYZ タイルの格子をBaseLayerViewGL2D クラスを拡張してWebGL で描画する実験的なサンプル
@@ -169,8 +182,12 @@
     *      デフォルトの"satellite" と"streets-night-vector" を切り替え操作の機能を追加するために参考にしました
     *      https://developers.arcgis.com/javascript/latest/sample-code/intro-widgets/
     * 
+    * - f) Slippy map tilenames
+    *      このサイトは、/z/x/y タイルのタイル番号や経度緯度の各種言語での計算式が掲載されています。
+    *      https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
+    * 
     **********************************************************************************/
-
+    
     const CustomLayerView2D = BaseLayerViewGL2D.createSubclass({
         a_Position: 0,
 
@@ -204,10 +221,11 @@
             canvas.width = this.layer.tileInfo.size[0];
             canvas.height = this.layer.tileInfo.size[1];
             const ctx = canvas.getContext("2d");
-            ctx.fillStyle = "white";
-            ctx.shadowColor = "black";
-            ctx.strokeStyle = "white";
-            ctx.shadowBlur = 3;
+            // オリジナルのコードからタイル情報を描画する色や影の設定を変更
+            ctx.fillStyle = "Black"; //"white";
+            ctx.shadowColor = "white";//"black";
+            ctx.strokeStyle = "Black"; //"white";
+            ctx.shadowBlur = 1; //3;
             ctx.font = "20px sans-serif";
             this.ctx = ctx;
 
@@ -293,6 +311,10 @@
             // Create new textures as needed.
             for (let i = 0; i < this.tiles.length; ++i) {
                 const tile = this.tiles[i];
+                // 2022.9.2 に追加:
+                // esri の tile.id は level/row/col/world format なので、z/x/y フォーマットのtileid で表示するために追加
+                const tile_id = [String(tile.level), String(tile.col), String(tile.row)].join('/');
+                
                 tileIdSet.add(tile.id);
               
                 if (!this.textures.has(tile.id)) {
@@ -305,7 +327,8 @@
                         this.ctx.canvas.width,
                         this.ctx.canvas.height
                     );
-                    this.ctx.fillText(tile.id, 10, 24);
+                    //this.ctx.fillText(tile.id, 10, 24); # border に表示される tile.id をz/x/y フォーマットのtileidに変更
+                    this.ctx.fillText(tile_id, 10, 24);
                     this.ctx.strokeRect(
                         0,
                         0,
@@ -457,6 +480,7 @@
             for (let i = 0; i < this.tiles.length; i++) {
                 // Retrieve the current tile and its associated texture.
                 const tile = this.tiles[i];
+                
                 const texture = this.textures.get(tile.id);
 
                 // Derive the screen `rect` for this tile.
@@ -501,26 +525,6 @@
         // `this.tiles` が変更されたときに呼ばれるので、ここでcurTiles テーブルに表示するタイル情報を格納
         tilesChanged: function () {
             //console.log("tilesChanged");
-            //
-            // this.tiles はTile オブジェクトのArray 
-            // Tile オブジェクトは以下のHelpにあるように、
-            // https://developers.arcgis.com/javascript/latest/api-reference/esri-views-2d-layers-BaseLayerViewGL2D.html#Tile
-            // tile.id は次を"/"で区切りで連ねた文字列
-            //   tile.level
-            //   tile.row
-            //   tile.col
-            //   tile.world
-            // tile.bounds はArray でタイルの4端の座標が入っている
-            //    (xmin, ymin, xmax, ymax)
-            // 他にも resolution, scale, coords などのプロパティもある
-            // 
-            // ログには次のように例のように表示される
-            // id: 1/1/1/-1 ; bounds: -0.000002983957529067993,-20037508.342781033,20037508.342781033,0.000002983957529067993
-            // id: 1/0/1/-1 ; bounds: -0.000002983957529067993,0.000002983957529067993,20037508.342781033,20037508.342787
-            // for (let i = 0; i < this.tiles.length; ++i){
-            //   console.log("id: " + tile.id + " ; bounds: " + tile.bounds.toString())
-            // }
-            
             curTiles = this.tiles; // 一覧表示用にthis.tilesの情報を格納
             
         }
@@ -530,7 +534,8 @@
     const CustomLayer = Layer.createSubclass({
         // We want to take advantage of the tiling capabilities of BaseLayerViewGL2D.
         tileInfo: TileInfo.create({
-            size: 512,
+            //size: 512,
+            size: 256, //元のサンプルだと地図の描画範囲が狭いので、World_Imagery と揃えて256 に変更
             spatialReference: { wkid: 3857 }
         }),
 
@@ -555,25 +560,35 @@
         container: "viewDiv",
         map: map,
         // 皇居周辺のmesh.id = 12/1612/3638/0 がアプリの初期表示で表示されるよう調整
-        zoom : 13, //12
-        center : [139.8003972,35.7165044]  //[139.7683972,35.7265044]
-        //zoom: 5,
-        //center: [-100, 40]
+        zoom : 12,
+        center : [139.8003972,35.7165044],
+        constraints: { // zoom level を制限
+            minZoom: 4,
+            maxZoom: 18
+        }
     });
     
     /**********************************************************************************
     * BasemapToggle widget でベースマップを切り替えする機能を追加
-    * 単純に well known id "streets-night-vector" でbasemap を指定すると英語地図に
-    * なってしまうのでbasemapのid を指定して追加
-    * 以下でクエリした一覧に日本語ベクタータイルが含まれる：
-    *   https://www.arcgis.com/home/user.html?user=Esri_cy_JP
+    * Popupでのタイル番号の計算に支障がないように、タイルサイズをWorld_Imagery と同じ256 の地理院タイルと切替するようにした
+    * 
+    * 地理院タイルをベースマップとして利用する方法は、これまでのいろいろ試した定義から持ってくると便利:
+    * https://github.com/kataya/js_playaround/blob/master/src/CutsomBasemapGallery.html
+    * https://github.com/kataya/gsivectortile-mapbox-gl-js/blob/master/gsi_maps_v2.html
     **********************************************************************************/
     const toggle = new BasemapToggle({
         view: view,
-        //nextBasemap:"streets-night-vector"
         nextBasemap: new Basemap(
-                {portalItem: {id: "ee3092a72f464186b6a192e82819d438"}}
-            ) // streets-night-vector 日本語版
+        {
+            baseLayers:[new WebTileLayer({
+              urlTemplate: "https://cyberjapandata.gsi.go.jp/xyz/std/{level}/{col}/{row}.png",
+              copyright: "地理院タイル （https://maps.gsi.go.jp/development/ichiran.html）",
+              opacity: 0.8
+            })],
+            title: "地理院タイル - 標準地図",
+            id: "stdmap",
+            thumbnailUrl: "https://cyberjapandata.gsi.go.jp/xyz/std/12/3637/1612.png"
+        })
     });
 
     view.ui.add(toggle, "bottom-left")
@@ -582,52 +597,49 @@
     /**********************************************************************************
     * tableContainer の表示/非表示の切り替え用に追加
     **********************************************************************************/
-    let tableDiv;
+    let tableContainer;
     let curTiles = []; // 一覧表示用にthis.tilesの情報をtilesに格納
 
     view.when(() => {
         view.whenLayerView(layer).then((layerView) => {
-          // Get references to div elements for toggling table visibility
-          const appContainer = document.getElementById("appContainer");
-          const tableContainer = document.getElementById("tableContainer");
-          //const tableDiv = document.getElementById("tableDiv");
-          tableDiv = document.getElementById("tableDiv");
+            // Get references to div elements for toggling table visibility
+            const appContainer = document.getElementById("appContainer");
+            tableContainer = document.getElementById("tableContainer");
 
-          // Add toggle visibility slider
-          view.ui.add(document.getElementById("mainDiv"), "top-right");
+            // Add toggle visibility slider
+            view.ui.add(document.getElementById("mainDiv"), "top-right");
 
-          // Get reference to div elements
-          const checkboxEle = document.getElementById("checkboxId");
-          const labelText = document.getElementById("labelText");
+            // Get reference to div elements
+            const checkboxEle = document.getElementById("checkboxId");
+            const labelText = document.getElementById("labelText");
 
-          // Listen for when toggle is changed, call toggleFeatureTable function
-          checkboxEle.onchange = () => {
-            toggleFeatureTable();
-          };
+            // Listen for when toggle is changed, call toggleFeatureTable function
+            checkboxEle.onchange = () => {
+                toggleFeatureTable();
+            };
 
-          function toggleFeatureTable() {
-            // Check if the table is displayed, if so, toggle off. If not, display.
-            if (!checkboxEle.checked) {
-              appContainer.removeChild(tableContainer);
-              labelText.innerHTML = "Show Table";
-            } else {
-              appContainer.appendChild(tableContainer);
-              labelText.innerHTML = "Hide Table";
+            function toggleFeatureTable() {
+                // Check if the table is displayed, if so, toggle off. If not, display.
+                if (!checkboxEle.checked) {
+                    appContainer.removeChild(tableContainer);
+                    labelText.innerHTML = "Show Table";
+                } else {
+                    appContainer.appendChild(tableContainer);
+                    labelText.innerHTML = "Hide Table";
+                }
             }
-          }
-          
         })
         .catch((error) => {
-          console.log(error);
+            console.log(error);
         });
 
     });
     
     /**********************************************************************************
-    * Tiles の情報ともとにHTMLTableを作成する処理を関数化 その２
+    * Tiles の情報をもとにHTMLTableを作成する処理を関数化 その２
     * ※「Back To The Basics: How To Generate a Table With JavaScript」を参考に改修したもの
     *   https://www.valentinog.com/blog/html-table/
-    * ＋ここにWebメルカトルの座標値を経度緯度へ変換してテーブルに追加も追加
+    * ＋ここに元々タイルが保持しているWebメルカトルの座標値から、経度緯度の座標へ変換し、テーブルに追加する処理も追加
     **********************************************************************************/
     function _generateTableHead(table, data){
         let thead = table.createTHead();
@@ -640,22 +652,30 @@
             row.appendChild(th);
         }
     }
+    
     function _generateTableRow(row, tileval){
         let data = row.insertCell();
         data.className += "tiles";
         data.innerHTML = tileval;
         row.appendChild(data);
     }
+    
     function _generateTable(table, tiles) {
         for (let i = 0; i < tiles.length; ++i){
             let row = table.insertRow();
             const tile = tiles[i];
+            // 2022.9.2: zxy フォーマット のために追加
+            const tile_id = [String(tile.level), String(tile.col), String(tile.row)].join('/');
             // id
-            _generateTableRow(row, tile.id);
+            //_generateTableRow(row, tile.id); // zxy format のIDへ変更
+            _generateTableRow(row, tile_id);
+
             // level, row, col
             _generateTableRow(row, tile.level);
-            _generateTableRow(row, tile.row);
+            //_generateTableRow(row, tile.row); // zxy format のIDに揃えて並び順を変更
+            //_generateTableRow(row, tile.col);
             _generateTableRow(row, tile.col);
+            _generateTableRow(row, tile.row);
             // xmin, ymin, xmax, ymax
             _generateTableRow(row, tile.bounds[0].toFixed(8));
             _generateTableRow(row, tile.bounds[1].toFixed(8));
@@ -670,12 +690,18 @@
             _generateTableRow(row, lonlat_max[1].toFixed(8));
         }
     }
+    
+    /**********************************************************************************
+    * Tiles の情報ともとにHTMLTableを作成する処理を関数化
+    * ＋ここにWebメルカトルの座標値を経度緯度へ変換してテーブルに追加も追加
+    **********************************************************************************/
     function createTilesHtmTable2(tiles){
         const tbl = document.createElement("table");
         //<table border="1" style="border-collapse: collapse">
         tbl.border = "1";
         tbl.setAttribute("style", "border-collapse: collapse");
         tbl.setAttribute("id","tiles");
+        tbl.className = "tiles"
 
         // https://www.valentinog.com/blog/html-table/ に書いてあるように
         // 呼び出し順を変更すると<thead>と<tbody> がテーブルに追加される
@@ -698,7 +724,7 @@
         //     省略
         //  </tr>
         //</thead>
-        let head_data = ['id','level','row','col',
+        let head_data = ['id (zxy)','level','col (x)','row (y)', //['id','level','row','col',　 // zxy format に揃えてヘッダーを変更
                          'xmin','ymin','xmax','ymax',
                          'lon_min','lat_min','lon_max','lat_max']
         _generateTableHead(tbl, head_data);
@@ -706,10 +732,6 @@
         return tbl;
     }
 
-    /**********************************************************************************
-    * Tiles の情報ともとにHTMLTableを作成する処理を関数化
-    * ＋ここにWebメルカトルの座標値を経度緯度へ変換してテーブルに追加も追加
-    **********************************************************************************/
     function createTilesHtmTable(tiles){
         const tbl = document.createElement("table");
         //<table border="1" style="border-collapse: collapse">
@@ -859,18 +881,83 @@
     }
 
     /**********************************************************************************
-    * watchUtils()でプロパティの変更を監視し、
+    * HTML Table で選択したタイルをグラフィックで描画
+    **********************************************************************************/
+    function addSelectedTileToGraphic(xmin, ymin, xmax, ymax){
+        
+        view.graphics.removeAll();
+        
+        const polygon = {
+            type: "polygon", // autocast
+            rings: [
+                [xmin, ymax],
+                [xmax, ymax],
+                [xmax, ymin],
+                [xmin, ymin],
+                [xmin, ymax]
+            ]
+        };
+        // Symbol playground で設定したシンボル
+        // https://developers.arcgis.com/javascript/latest/sample-code/playground/live/
+        const fillSymbol = {
+            type: "simple-fill",
+            color: [197, 162, 59, 0.25] // hover のカラーコード #C5A23B40　と同値
+        };
+        const graphic = new Graphic({
+            geometry: polygon,
+            symbol: fillSymbol
+        });
+        
+        view.graphics.add(graphic);
+    }
+    
+    /**********************************************************************************
+    * watchUtils() でプロパティの変更を監視し（ reactiveUtils() に変更）、
     * view の"stationary" がtrue になったときにtiles の情報をテーブルにする処理を追加
     **********************************************************************************/
     //"stationary" がtrue になったときに呼ばれるコールバック関数を定義
     function currentTiles(){
-        // tableDiv にタイルの情報を表示
+    
+        // 2022.9.21 追加
+        view.graphics.removeAll();
+        // Show Table の checkboxId がオフの時はタイル情報を表示しない
+        const checkboxEle = document.getElementById("checkboxId");
+        if (!checkboxEle.checked) {return;}
+        
+        // tableContainer にタイルの情報を表示
         // curTiles(= this.tiles) をもとにHTMLTableを作成
         if (curTiles.length > 0) {
             const tbl = createTilesHtmTable2(curTiles); //createTilesHtmTable(curTiles); 
             //console.log(tbl);
-            // tableDiv にHTMLTable を適用
-            tableDiv.innerHTML = tbl.outerHTML;
+            // tableContainer にHTMLTable を適用
+            tableContainer.innerHTML = tbl.outerHTML;
+            
+            // 2022.9.21 追加
+            // table でレコード選択時に処理をする
+            // https://stackoverflow.com/questions/1207939/adding-an-onclick-event-to-a-table-row
+            const table = document.getElementById("tiles");
+            const rows = table.getElementsByTagName("tr");
+            for (let i= 0; i < rows.length; i++){
+                let currentRow = table.rows[i];
+                currentRow.onclick = function(event) {
+                    //console.log(event.target.innerText); // cell の値
+                    rowindex = this.rowIndex;
+                    //console.log(rowindex);
+                    let tr = rows[rowindex];
+                    //console.log(tr.firstChild.innerText); // tileid
+                    //console.log(tr.children[0].innerText); // tileid
+                    // tileid の列をクリックしたときだけに限定してグラフィックに描画にする
+                    if (event.target.innerText === tr.firstChild.innerText){
+                        // 経度緯度の座標を取得
+                        let xmin = parseFloat(tr.children[8].innerText);
+                        let ymin = parseFloat(tr.children[9].innerText);
+                        let xmax = parseFloat(tr.children[10].innerText);
+                        let ymax = parseFloat(tr.children[11].innerText);
+                        // グラフィックに描画
+                        addSelectedTileToGraphic(xmin, ymin, xmax, ymax);
+                    };
+                };
+            }
         }
     }
 
@@ -881,9 +968,16 @@
     *   第一引数：プロパティの変更を監視する対象オブジェクト
     *   第二引数：プロパティ名（文字列）を指定
     *   第三引数：プロパティが変更されたときに呼ばれるコールバック関数を指定
+    * 
+    * 4.24から推奨されているreactiveUtils() に変更
+    * https://developers.arcgis.com/javascript/latest/api-reference/esri-core-reactiveUtils.html#when
     **********************************************************************************/
-    watchUtils.whenTrue(view, "stationary", currentTiles);
-
+    //watchUtils.whenTrue(view, "stationary", currentTiles);
+    reactiveUtils.when(
+        () => view?.stationary === true,
+        async() => {
+            await currentTiles();
+        });
 
     /**********************************************************************************
     * クリック地点のXYとLonLat座標をもとにEsriのclass を使ったポップアップ用HTMLTableを作成
@@ -920,62 +1014,69 @@
         }
         table.appendChild(tblBody);
     }
-    function createPopupHtmlTable(x, y, lon, lat){
+    
+
+    function createPopupHtmlTable(x, y, lon, lat, tileid, zoom, xtile, ytile,
+                                  xmin, ymin, xmax, ymax, lon_min, lat_min, lon_max, lat_max){
+
         const tbl = document.createElement("table");
         tbl.className = "esri-widget__table";
-        //const tblBody = document.createElement("tbody");
 
         // オブジェクトを使った方式に変更
-        const data_obj = {"X":x, "Y":y ,"longitude":lon , "latitude":lat }
+        //const data_obj = {"X":x, "Y":y ,"longitude":lon , "latitude":lat ,
+        const data_obj = {"id(zxy)":tileid, "level":zoom, "col(x)":xtile, "row(y)":ytile ,
+                          "xmin":xmin, "ymin":ymin, "xmax":xmax, "ymax":ymax,
+                          "lon_min":lon_min, "lat_min":lat_min, "lon_max":lon_max, "lat_max":lat_max}
         _generatePopupTableBody(tbl, data_obj);
-
-        // let x_row = document.createElement("tr");
-        // let x_heading = document.createElement("th");
-        // x_heading.className = "esri-feature-fields__field-header";
-        // x_heading.innerHTML = "X";
-        // let x_data = document.createElement("td");
-        // x_data.className = "esri-feature-fields__field-data";
-        // x_data.innerHTML = x;
-        // x_row.appendChild(x_heading);
-        // x_row.appendChild(x_data);
-        // tblBody.appendChild(x_row);
-
-        // let y_row = document.createElement("tr");
-        // let y_heading = document.createElement("th");
-        // y_heading.className = "esri-feature-fields__field-header";
-        // y_heading.innerHTML = "Y";
-        // let y_data = document.createElement("td");
-        // y_data.className = "esri-feature-fields__field-data";
-        // y_data.innerHTML = y;
-        // y_row.appendChild(y_heading);
-        // y_row.appendChild(y_data);
-        // tblBody.appendChild(y_row);
-
-        // let lon_row = document.createElement("tr");
-        // let lon_heading = document.createElement("th");
-        // lon_heading.className = "esri-feature-fields__field-header";
-        // lon_heading.innerHTML = "longitude";
-        // let lon_data = document.createElement("td");
-        // lon_data.className = "esri-feature-fields__field-data";
-        // lon_data.innerHTML = lon;
-        // lon_row.appendChild(lon_heading);
-        // lon_row.appendChild(lon_data);
-        // tblBody.appendChild(lon_row);
-
-        // let lat_row = document.createElement("tr");
-        // let lat_heading = document.createElement("th");
-        // lat_heading.className = "esri-feature-fields__field-header";
-        // lat_heading.innerHTML = "latitude";
-        // let lat_data = document.createElement("td");
-        // lat_data.className = "esri-feature-fields__field-data";
-        // lat_data.innerHTML = lat;
-        // lat_row.appendChild(lat_heading);
-        // lat_row.appendChild(lat_data);
-        // tblBody.appendChild(lat_row);
-
-        // tbl.appendChild(tblBody);
-
+        
         return tbl;
+    }
+
+    /**********************************************************************************
+    * ポップアップに表示するために、Slippy map tilenames を参考にしてタイル番号と座標を計算を関数化
+    * https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames#ECMAScript_(JavaScript/ActionScript,_etc.)
+    *
+    *
+    a) 経度・緯度とズームレベルでタイル番号を返却
+      function lon2tile(lon,zoom) {return (Math.floor((lon+180)/360*Math.pow(2,zoom))); }
+      function lat2tile(lat,zoom) {return (Math.floor((1-Math.log(Math.tan(lat*Math.PI/180) + 1/Math.cos(lat*Math.PI/180))/Math.PI)/2 *Math.pow(2,zoom))); }
+    *
+    *
+    b) タイル番号とズームレベルで経度・緯度を返却
+      function tile2long(x,z) {
+        return (x/Math.pow(2,z)*360-180);
+      }
+      function tile2lat(y,z) {
+        var n=Math.PI-2*Math.PI*y/Math.pow(2,z);
+        return (180/Math.PI*Math.atan(0.5*(Math.exp(n)-Math.exp(-n))));
+      }
+    *
+    **********************************************************************************/
+    function deg2num(lon_deg, lat_deg, zoom){
+        const lat_rad = lat_deg * (Math.PI / 180);
+        const n = Math.pow(2, zoom);
+        const xtile = Math.floor((lon_deg + 180) / 360 * n);
+        const ytile = Math.floor((1 - Math.log(Math.tan(lat_rad) + 1 / Math.cos(lat_rad)) / Math.PI)/2 * n);
+        return [xtile, ytile];
+    }
+
+    function num2deg(xtile, ytile, zoom){
+        const n = Math.pow(2, zoom);
+        const lon_deg = xtile / n * 360 - 180;
+        const nn = Math.PI - 2 * Math.PI * ytile / n;
+        const lat_deg = 180 / Math.PI * Math.atan(0.5 * (Math.exp(nn) - Math.exp(-nn)));
+        return [lon_deg, lat_deg];
+    }
+    
+    function deg2numbound(lon_deg, lat_deg, zoom){
+        const [xtile, ytile] = deg2num(lon_deg, lat_deg, zoom);
+        const [xmin, ymax] = num2deg(xtile, ytile, zoom); //左上の座標
+        const [xmax, ymin] = num2deg(xtile + 1, ytile + 1, zoom); //右下の座標
+        return [xtile, ytile, xmin, ymin, xmax, ymax]
+    }
+    
+    function num2tileid(xtile, ytile, zoom){
+        return `${zoom}/${xtile}/${ytile}`
     }
 
     /**********************************************************************************
@@ -983,22 +1084,38 @@
     //https://developers.arcgis.com/javascript/latest/api-reference/esri-views-View.html#event-click
     **********************************************************************************/
     view.on("click", (event) =>{
-
+        
+        view.graphics.removeAll();
+        
         // you must overwrite default click-for-popup
         // behavior to display your own popup
         view.popup.autoOpenEnabled = false;
         
-          // Get the coordinates of the click on the view
-        let lat = event.mapPoint.latitude;
-        let lon = event.mapPoint.longitude;
-        let xy = webMercatorUtils.lngLatToXY(lon, lat);
+        // Get the coordinates of the click on the view
+        const lat = event.mapPoint.latitude;
+        const lon = event.mapPoint.longitude;
+        const xy = webMercatorUtils.lngLatToXY(lon, lat);
+        
+        //let xtile, ytile = deg2num(lon, lat, view.zoom);
+        //console.log(xtile, ytile, view.zoom);
+        // XYZタイルの情報を取得してポップアップで表示する処理を追加
+        const zoom = view.zoom; //CustomLayer のタイルサイズが256の場合はこのままで、衛星画像を選択した場合はこのまま
+        //const zoom = view.zoom + 1; //CustomLayer のタイルサイズが256の場合で、ベクタータイルレイヤーを選択した場合は＋1する
+        
+        const [xtile, ytile, lon_min, lat_min, lon_max, lat_max] = deg2numbound(lon, lat, zoom);
+        const tileid = num2tileid(xtile, ytile, zoom);
+        const xymin = webMercatorUtils.lngLatToXY(lon_min, lat_min);
+        const xymax = webMercatorUtils.lngLatToXY(lon_max, lat_max);
 
         view.popup.open({
             // Set the popup's title to the coordinates of the location
-            title: "クリック地点の座標: [" + lon.toFixed(3) + ", " + lat.toFixed(3) + "]",
+            title: "クリック地点の座標: [" + lon.toFixed(8) + ", " + lat.toFixed(8) + "]",
             location: event.mapPoint, // Set the location of the popup to the clicked location
             //content: "XY: [" + xy[0].toFixed(8) + "," + xy[1].toFixed(8) + "]"
-            content: createPopupHtmlTable(xy[0].toFixed(8), xy[1].toFixed(8), lon.toFixed(8), lat.toFixed(8))
+            content: createPopupHtmlTable(xy[0].toFixed(8), xy[1].toFixed(8), lon.toFixed(8), lat.toFixed(8), 
+                                          tileid, zoom, xtile, ytile,
+                                          xymin[0].toFixed(8), xymin[1].toFixed(8), xymax[0].toFixed(8), xymax[1].toFixed(8), 
+                                          lon_min.toFixed(8), lat_min.toFixed(8), lon_max.toFixed(8), lat_max.toFixed(8))
         });
         
     });
@@ -1012,7 +1129,6 @@
     <div id="appContainer">
         <div id="viewDiv"></div>
         <div id="tableContainer" class="container">
-            <div id="tableDiv"></div>
         </div>
         <div id="mainDiv" class="esri-widget">
             <label class="switch">
