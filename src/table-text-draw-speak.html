@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <title>
+    テーブルでクリックしたセルの値を、グラフィックとして描画 と Web Speech API で喋らせるアプリ
+    </title>
+    <link rel="stylesheet" href="https://js.arcgis.com/4.24/esri/themes/light/main.css"/>
+    <script src="https://js.arcgis.com/4.24/"></script>
+
+    <style>
+    html,
+    body {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    .esri-popup--is-docked-top-right .esri-popup__main-container {
+      max-height: 100%;
+    }
+
+    #appContainer {
+      display: flex;
+      flex-direction:column;
+      height: 100%;
+      width: 100%;
+    }
+
+    #viewDiv {
+      flex: 1;
+      width: 100%;
+    }
+
+    /* container 内でスクロール可能なtableを試すスタイル定義 */
+    .container {
+      display: flex;
+      overflow: auto;
+      height: 40%;
+    }
+    table.tiles {
+      width: 100%;
+    }
+    /* テーブルの見栄え調整 */
+    th.tiles {
+      padding: 8px;
+      background-color: #f5f5f5;
+      
+      position: sticky;
+      top: 0;
+      left: 0;
+    }
+    td.tiles {
+      padding: 5px;
+    }
+    td.tiles:hover {
+      background-color: #C5A23B40;
+    }
+    /* container 内でスクロール可能なtableを試すスタイル定義 */
+    
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 45px;
+      height: 22px;
+      vertical-align: middle;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      -webkit-transition: 0.4s;
+      transition: 0.4s;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 1px;
+      background-color: white;
+      -webkit-transition: 0.4s;
+      transition: 0.4s;
+    }
+
+    input:checked+.slider {
+      background-color: #2196f3;
+    }
+
+    input:focus+.slider {
+      box-shadow: 0 0 1px #2196f3;
+    }
+
+    input:checked+.slider:before {
+      -webkit-transform: translateX(20px);
+      -ms-transform: translateX(20px);
+      transform: translateX(20px);
+    }
+
+    /* Rounded sliders */
+
+    .slider.round {
+      border-radius: 20px;
+    }
+
+    .slider.round:before {
+      border-radius: 50%;
+    }
+
+    .labelText {
+      padding-left: 5px;
+      font-size: 15px;
+    }
+
+    #mainDiv {
+      padding: 8px;
+    }
+    
+
+    </style>
+
+    <script>
+    require([
+      "esri/Map",
+      "esri/Basemap",
+      "esri/views/MapView",
+      "esri/layers/Layer",
+      "esri/layers/WebTileLayer",
+      "esri/layers/support/TileInfo",
+      "esri/views/2d/layers/BaseLayerViewGL2D",
+      "esri/geometry/support/webMercatorUtils",
+      "esri/core/reactiveUtils",
+      "esri/widgets/BasemapToggle",
+      "esri/Graphic"
+    ], (Map, Basemap, MapView, Layer, WebTileLayer, TileInfo, BaseLayerViewGL2D, webMercatorUtils,
+        reactiveUtils, BasemapToggle, Graphic) => {
+
+    const map = new Map({
+        basemap: "satellite",
+    });
+
+    const view = new MapView({
+        container: "viewDiv",
+        map: map,
+        // 皇居周辺のmesh.id = 12/1612/3638/0 がアプリの初期表示で表示されるよう調整
+        zoom : 12,
+        center : [139.8003972,35.7165044],
+        constraints: { // zoom level を制限
+            minZoom: 4,
+            maxZoom: 18
+        }
+    });
+    
+    /**********************************************************************************
+    * BasemapToggle widget でベースマップを切り替えする機能を追加
+    * Popupでのタイル番号の計算に支障がないように、タイルサイズをWorld_Imagery と同じ256 の地理院タイルと切替するようにした
+    * 
+    * 地理院タイルをベースマップとして利用する方法は、これまでのいろいろ試した定義から持ってくると便利:
+    * https://github.com/kataya/js_playaround/blob/master/src/CutsomBasemapGallery.html
+    * https://github.com/kataya/gsivectortile-mapbox-gl-js/blob/master/gsi_maps_v2.html
+    **********************************************************************************/
+    const toggle = new BasemapToggle({
+        view: view,
+        nextBasemap: new Basemap(
+        {
+            baseLayers:[new WebTileLayer({
+              urlTemplate: "https://cyberjapandata.gsi.go.jp/xyz/std/{level}/{col}/{row}.png",
+              copyright: "地理院タイル （https://maps.gsi.go.jp/development/ichiran.html）",
+              opacity: 0.8
+            })],
+            title: "地理院タイル - 標準地図",
+            id: "stdmap",
+            thumbnailUrl: "https://cyberjapandata.gsi.go.jp/xyz/std/12/3637/1612.png"
+        })
+    });
+
+    view.ui.add(toggle, "bottom-left");
+    
+    // テーブルから取得した情報を使ってグラフィックに描画するテスト用の関数
+    // 4.22 だと次のエラーになるので、4.23 以上にする必要があるようです
+    // {name: 'mapview-invalid-resource', 
+    // details: undefined, message: "Couldn't find font sans-serif-regular. Falling back to Arial Unicode MS Regular"}
+    // https://community.esri.com/t5/arcgis-api-for-javascript-questions/mapview-invalid-resource-font/m-p/1131269
+    function addTextToGraphic(text){
+        view.graphics.removeAll();
+        const textSymbol = {
+              type: "text", // autocasts as new TextSymbol()
+              text: text,
+              color: "red",
+              font: {
+                size: 48
+              }
+        };
+        const graphic = new Graphic({
+            geometry: view.center,
+            symbol: textSymbol
+        });
+        view.graphics.add(graphic);
+    }
+
+    // table からクリックしたセルの値を取得してグラフィック文字を描画するのと、Web Speech API で喋らせる
+    const table = document.getElementById("tiles");
+    const rows = table.getElementsByTagName("tr");
+    for (let i= 0; i < rows.length; i++){
+        let currentRow = table.rows[i];
+        currentRow.onclick = function(event) {
+            //console.log(event.target.innerText); // cell の値
+            rowindex = this.rowIndex;
+            //console.log(rowindex);
+            let tr = rows[rowindex];
+            //console.log(tr.firstChild.innerText); // tileid
+            //console.log(tr.children[0].innerText); // tileid
+            // tileid の列をクリックしたときだけに限定してグラフィックに描画にする
+            
+            // 0列目を選択した場合はlang = 'en-US'、1列目を選択した場合はlang = 'ja-JP'に設定する
+            let uttr = new SpeechSynthesisUtterance();
+            if (event.target.innerText === tr.children[0].innerText){
+                uttr.text = tr.children[0].innerText;
+                uttr.lang = 'en-US';
+            }
+            else if(event.target.innerText === tr.children[1].innerText){
+                uttr.text = tr.children[1].innerText;
+                uttr.lang = 'ja-JP';
+            }
+            speechSynthesis.speak(uttr);
+            
+            // view の中心にテキストシンボルとして描画
+            addTextToGraphic(uttr.text);
+        };
+    }
+
+    // view をクリックしたらグラフィックを全削除
+    view.on("click", (event) =>{
+        view.graphics.removeAll();
+    });
+
+    });
+    </script>
+</head>
+
+<body>
+    <div id="appContainer">
+        <div id="viewDiv"></div>
+        <div id="tableContainer" class="container">
+            <table id="tiles" class="tiles">
+                <thead>
+                    <tr>
+                        <th class="tiles">English</th>
+                        <th class="tiles">日本語</th>
+                    </tr>
+                </thead>
+                <!--https://www.alohaenglish.jp/fruits-in-english/-->
+                <tbody>
+                    <tr>
+                        <td class="tiles">apple</td>
+                        <td class="tiles">りんご</td>
+                    </tr>
+                    <tr>
+                        <td class="tiles">green apple</td>
+                        <td class="tiles">青りんご</td>
+                    </tr>
+                    <tr>
+                        <td class="tiles">strawberry</td>
+                        <td class="tiles">イチゴ</td>
+                    </tr>
+                    <tr>
+                        <td class="tiles">avocado</td>
+                        <td class="tiles">アボカド</td>
+                    </tr>
+                    <tr>
+                        <td class="tiles">orange</td>
+                        <td class="tiles">オレンジ</td>
+                    </tr>
+                    <tr>
+                        <td class="tiles">raspberry</td>
+                        <td class="tiles">木イチゴ</td>
+                    </tr>
+                    <tr>
+                        <td class="tiles">kiwi</td>
+                        <td class="tiles">キウィ</td>
+                    </tr>
+                    <tr>
+                        <td class="tiles">grapefruit</td>
+                        <td class="tiles">グレープフルーツ</td>
+                    </tr>
+                    <tr>
+                        <td class="tiles">coconut</td>
+                        <td class="tiles">ココナッツ</td>
+                    </tr>
+                    <tr>
+                        <td class="tiles">cherry</td>
+                        <td class="tiles">さくらんぼ</td>
+                    </tr>
+                    <tr>
+                        <td class="tiles">pineapple</td>
+                        <td class="tiles">パイナップル</td>
+                    </tr>
+                    <tr>
+                        <td class="tiles">banana</td>
+                        <td class="tiles">バナナ</td>
+                    </tr>
+                    <tr>
+                        <td class="tiles">papaya</td>
+                        <td class="tiles">パパイヤ</td>
+                    </tr>
+                    <tr>
+                        <td class="tiles">durian</td>
+                        <td class="tiles">ドリアン</td>
+                    </tr>
+                    <tr>
+                        <td class="tiles">grape</td>
+                        <td class="tiles">ぶどう</td>
+                    </tr>
+                    <tr>
+                        <td class="tiles">plum</td>
+                        <td class="tiles">プラム</td>
+                    </tr>
+                    <tr>
+                        <td class="tiles">blueberry</td>
+                        <td class="tiles">ブルーベリー</td>
+                    </tr>
+                    <tr>
+                        <td class="tiles">muscat</td>
+                        <td class="tiles">マスカット</td>
+                    </tr>
+                    <tr>
+                        <td class="tiles">muskmelon</td>
+                        <td class="tiles">マスクメロン</td>
+                    </tr>
+                    <tr>
+                        <td class="tiles">mango</td>
+                        <td class="tiles">マンゴー</td>
+                    </tr>
+                    <tr>
+                        <td class="tiles">peach</td>
+                        <td class="tiles">桃</td>
+                    </tr>
+                    <tr>
+                        <td class="tiles">yuzu</td>
+                        <td class="tiles">ゆず</td>
+                    </tr>
+                    <tr>
+                        <td class="tiles">lime</td>
+                        <td class="tiles">ライム</td>
+                    </tr>
+                    <tr>
+                        <td class="tiles">lemon</td>
+                        <td class="tiles">レモン</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <!--
+        <div id="mainDiv" class="esri-widget">
+            <label class="switch">
+                <input id="checkboxId" type="checkbox" checked="yes" />
+                <span class="slider round"></span>
+            </label>
+            <label class="labelText" id="labelText">Hide Table</label>
+        </div>-->
+    </div>
+</body>
+</html>
