@@ -7,13 +7,26 @@
 
 ## custom-gl-tiles-tileinfo.html
 
-* [Web メルカトル のタイル情報 (LODs , Tile Rows, Tile Columuns, タイルの四隅の座標) をマップと対話的に確認できるサンプルアプリ](https://kataya.github.io/js_playaround/src/custom-gl-tiles-tileinfo.html)
+* [XYZ タイル のLODs(z), Tile Columuns(x), Tile Rows(y) の座標をマップで対話的に確認できるサンプルアプリ](https://kataya.github.io/js_playaround/src/custom-gl-tiles-tileinfo.html)
 
-  XYZ タイルの格子をBaseLayerViewGL2D クラスを拡張してWebGL で描画する[実験的なサンプル](https://developers.arcgis.com/javascript/latest/sample-code/custom-gl-tiles/) を拡張し、タイル情報（id, level, row, column, xmin, ymin, xmax, ymax）の情報をテーブルで表示します。
-  Web メルカトルのxmin, ymin, xmax, ymax に対応した経度と緯度も一緒に表示します。また、マップ上でクリックした地点のWeb メルカトルのXY座標と、変換した経度と緯度の情報をポップアップ表示します。
-  
-  ![custom-gl-tiles-tileinfo](https://github.com/kataya/js_playaround/blob/branch-image/images/app_custom-gl-tiles-tileinfo.png?raw=true)
-  
+  WebGL でタイルを表示する実験的な[Tiling support for custom WebGL layer views](https://developers.arcgis.com/javascript/latest/sample-code/custom-gl-tiles/) のサンプルを拡張し、[タイル座標確認ページ](https://maps.gsi.go.jp/development/tileCoordCheck.html#5/35.362/138.731) のようにXYZ タイルの番号や、Web メルカトルと経度緯度でのタイルの四隅の座標を一覧に表示します。また、マップ上でクリックした地点のXYZ タイルの番号や、Web メルカトルと経度緯度での座標をポップアップで表示します。  
+
+  ![custom-gl-tiles-tileinfo](https://github.com/kataya/js_playaround/blob/master/images/app_custom-gl-tiles-tileinfo.gif?raw=true)
+
+  本サンプルは、以下のサンプルやWeb ページの情報を組み合わせて作成したサンプルアプリケーションです。  
+  * [Tiling support for custom WebGL layer views](https://developers.arcgis.com/javascript/latest/sample-code/custom-gl-tiles/)  
+  Web メルカトルで使われている XYZ タイルの格子をBaseLayerViewGL2D クラスを拡張してWebGL で描画する実験的なサンプル。今回のアプリはこのサンプルをもとに、他の機能を追加して作成しています。
+  * [FeatureTable widget with popup interaction](https://developers.arcgis.com/javascript/latest/sample-code/widgets-featuretable-popup-interaction/)  
+  FeatureTable widget を使用したテーブル表示のサンプル。今回はUI のスタイル定義 とtableContainer の表示/非表示の切り替え部分を利用しています。
+  * [Mercator](https://wiki.openstreetmap.org/wiki/Mercator)  
+  このサイトは、Web メルカトルと経度緯度 への変換の計算式が書かれているので、Arcade式を使った計算や他言語での計算の場合に利用可能です。今回のアプリでのWeb メルカトルから経度緯度への変換は ["esri/geometry/support/webMercatorUtils"](https://developers.arcgis.com/javascript/latest/api-reference/esri-geometry-support-webMercatorUtils.html#xyToLngLat) で変換して、結果をテーブルに出力しています。
+  * [Watch for changes]()  
+  イベントのリッスンと、プロパティの変更を監視する方法を示したサンプル。今回はプロパティの変更の監視と、マップクリックのイベント等の機能を追加するために参考にしました。
+  * [Intro to widgets using BasemapToggle]()  
+  BasemapToggle wigdet を使った背景地図の切り替えのサンプル。デフォルトの"satellite" と"地理院タイル(標準地図)" の切り替え操作の機能を追加するために参考にしました。
+  * [Slippy map tilenames](https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames)  
+  このサイトは、/z/x/y タイルのタイル番号や経度緯度の各種言語での計算式が掲載されています。
+
   
 ## js331_drawinfo_v2.html, js414_drawinfo_v2.html, js22_drawinfo_v2.html
 
