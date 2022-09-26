@@ -587,7 +587,8 @@
         nextBasemap: new Basemap(
         {
             baseLayers:[new WebTileLayer({
-              urlTemplate: "https://cyberjapandata.gsi.go.jp/xyz/std/{level}/{col}/{row}.png",
+              //urlTemplate: https://cyberjapandata.gsi.go.jp/xyz/std/{level}/{col}/{row}.png
+              urlTemplate: "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png", // {z}/{x}/{y} のままでも可能
               copyright: "地理院タイル （https://maps.gsi.go.jp/development/ichiran.html）",
               opacity: 0.8
             })],
