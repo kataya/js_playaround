@@ -146,9 +146,11 @@
       "esri/geometry/support/webMercatorUtils",
       "esri/core/reactiveUtils",
       "esri/widgets/BasemapToggle",
-      "esri/Graphic"
+      "esri/Graphic",
+      "esri/widgets/Expand",
+      "esri/widgets/LayerList"
     ], (Map, Basemap, MapView, Layer, WebTileLayer, TileInfo, BaseLayerViewGL2D, webMercatorUtils,
-        reactiveUtils, BasemapToggle, Graphic) => {
+        reactiveUtils, BasemapToggle, Graphic, Expand, LayerList) => {
 
     /**********************************************************************************
     * Web メルカトルで使われている XYZ タイル のLODs(z), Tile Columuns(x), Tile Rows(y) の情報と
@@ -549,7 +551,11 @@
         }
     });
 
-    const layer = new CustomLayer();
+    // 2022.9.26 変更 CustomLayer も LayerList widget を使って簡単に表示のオン/オフを切り替え可能なので
+    // LayerList widget 用に title プロパティを設定 // see https://developers.arcgis.com/javascript/latest/api-reference/esri-layers-Layer.html#title
+    //const layer = new CustomLayer();
+    const layer = new CustomLayer({title:"タイル座標 レイヤー"});
+
 
     const map = new Map({
         basemap: "satellite",
@@ -593,6 +599,17 @@
 
     view.ui.add(toggle, "bottom-left")
 
+    //2022.9.26 Expand widget と LayerList widget 追加
+    const layerList = new LayerList({
+        container: document.createElement("div"),
+        view: view
+    });
+    const layerListExpand = new Expand({
+        expandIconClass: "esri-icon-layer-list",  // see https://developers.arcgis.com/javascript/latest/guide/esri-icon-font/
+        view: view,
+        content: layerList
+    });
+    view.ui.add(layerListExpand, "bottom-right");
 
     /**********************************************************************************
     * tableContainer の表示/非表示の切り替え用に追加
