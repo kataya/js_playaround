@@ -88,6 +88,11 @@
   サンプルとして、今昔マップ on the Web のTile Map Service を表示。
 
 
+## layers-feature-Collection.html
+  
+  * [client-side graphics から FeatureLayer を作成・更新するサンプルアプリ](https://kataya.github.io/js_playaround/src/layers-feature-Collection.html)  
+  API Version 4.6 のときの「Create a FeatureLayer with client-side graphics」のサンプルをもとに更新
+
 ## js3x_4x_mixmap.html
 
 * [js3x_4x_mixmap](https://kataya.github.io/js_playaround/src/js3x_4x_mixmap.html)
