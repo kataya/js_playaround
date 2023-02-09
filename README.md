@@ -91,7 +91,13 @@
 ## layers-feature-Collection.html
   
   * [client-side graphics から FeatureLayer を作成・更新するサンプルアプリ](https://kataya.github.io/js_playaround/src/layers-feature-Collection.html)  
-  API Version 4.6 のときの「Create a FeatureLayer with client-side graphics」のサンプルをもとに更新
+  API Version 4.11 からはGeoJSONLayer が追加されたので、GeoJSON を簡単にレイヤーとして追加することができますが、API Version 4.6 のときの「Create a FeatureLayer with client-side graphics」のサンプルをもとに、地震の観測情報を、FeatureLayer のsource を入替によって更新を実現しているサンプルです。API Version も 4.25 へ更新してあります。  
+  また、2023/02/09 にgraphics の作成処理を"esri/core/workers" (Web Worker) を利用してバックグラウンドのスレッドで行うように改良しました。  
+
+## table-text-draw-speak.html
+  
+  * [テーブルでクリックしたセルの値を、グラフィックとして文字の描画 と Web Speech API で喋らせるアプリ](https://kataya.github.io/js_playaround/src/table-text-draw-speak.html)  
+  マウス操作時の選択したセルの列によって、英語と日本語を喋り分けます。※このアプリでは地図は特に意味ありません。
 
 ## js3x_4x_mixmap.html
 

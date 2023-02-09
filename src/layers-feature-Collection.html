@@ -77,12 +77,12 @@ require([
     "esri/layers/support/LabelClass",
     "esri/widgets/Legend",
     "esri/request",
-    "esri/core/watchUtils"
+    "esri/core/watchUtils",
+    "esri/core/workers",
+    "esri/Graphic"
 ], (esriConfig, SceneView, Map, FeatureLayer, 
-    GraphicsLayer, Point, LabelClass, Legend, esriRequest, watchUtils) => {
-
-    // CORS（オリジン間リソース共有）に登録されていない場合の設定
-    //esriConfig.request.corsEnabledServers.push("earthquake.usgs.gov");
+    GraphicsLayer, Point, LabelClass, Legend, esriRequest, watchUtils,
+    workers, Graphic) => {
 
     // 時間計測用
     let startTime, endTime;
@@ -91,7 +91,6 @@ require([
 
     // 最後にリクエストしたデータを保持
     let lastAddFeatureResults = [];
-
 
     /**************************************************
     * Define the specification for each field to create
@@ -202,7 +201,7 @@ require([
     * Create the map and view
     **************************************************/
     const map = new Map({
-        basemap: "dark-gray"//,
+        basemap: "dark-gray-vector" // 2023.02.09 - ベクタータイルに変更
     });
 
     // Create MapView
@@ -330,7 +329,8 @@ require([
     view.when(function() {
         // Request the earthquake data from USGS when the view resolves
         getData()
-          .then(createGraphics) // then send it to the createGraphics() method
+          //.then(createGraphics) // then send it to the createGraphics() method
+          .then(createGraphicsWorker) // 2023.02.09 - Web Worker 版に変更
           .then(createLayer) // when graphics are created, create the layer
           .then(createLegend) // when layer is created, create the legend
           .then(checkTimer) // 時間計測用に追加
@@ -358,6 +358,38 @@ require([
             responseType: "json"
         });
     }
+    
+    /**************************************************
+    * Add - 2023/02/09
+    * Create graphics with returned geojson data (worker を使う)
+    **************************************************/
+    function createGraphicsWorker(response) {
+        //console.log("createGraphicsWorker");
+        startTime = new Date();
+        //console.log(startTime.toString());
+        
+        const geoJson = response.data; // FeatureCollection
+        
+        const local = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+        const workerUrl = `${local}/earthquake_worker.js`;
+        let connection = null;
+        return workers.open(workerUrl)
+                    .then((conn) => {
+                        connection = conn;
+                        return connection.invoke("getEarthquakeGraphics", {geoJson});
+                    })
+                    .then((results) => {
+                        connection.close();
+                        connection = null;
+                        return new Promise((resolve) => {
+                            const features = results.map((a) => Graphic.fromJSON(a)); // JSON からGraphic へ変換
+                            resolve(features);
+                        });
+                    })
+                    .catch((error) => {
+                        console.log(error);
+                    });
+    }
 
     /**************************************************
     * Create graphics with returned geojson data
@@ -365,7 +397,7 @@ require([
     function createGraphics(response) {
         // データ取得後の計測開始
         startTime = new Date();
-        console.log(startTime.toString());
+        //console.log(startTime.toString());
 
         // raw GeoJSON data
         const geoJson = response.data;
@@ -376,7 +408,7 @@ require([
                 geometry: new Point({
                     x: feature.geometry.coordinates[0],
                     y: feature.geometry.coordinates[1],
-                    z: feature.properties.depth // Zはdepthを設定
+                    z: feature.geometry.coordinates[2] // Zはdepthを設定
                 }),
                 // select only the attributes you care about
                 attributes: {
@@ -400,6 +432,9 @@ require([
     * Create a FeatureLayer with the array of graphics
     **************************************************/
     function createLayer(graphics) {
+        //console.log("createLayer");
+        //console.log(graphics[0]);
+        
         if (lastAddFeatureResults.length > 0) {
             clearCollection();
         }
@@ -488,7 +523,8 @@ require([
     addGraphicsButton.addEventListener("click", function(event) {
         //console.log(event);
         getData()
-        .then(createGraphics) // then send it to the createGraphics() method
+        //.then(createGraphics) // then send it to the createGraphics() method
+        .then(createGraphicsWorker) // 2023.02.09 - Web Worker 版に変更
         .then(createLayer) // when graphics are created, create the layer
         .then(createLegend) // when layer is created, create the legend
         .then(checkTimer)
@@ -507,9 +543,10 @@ require([
 
     function checkTimer(){
         endTime = new Date();
-        console.log(endTime.toString());
+        //console.log(endTime.toString());
         document.getElementById('infoTime').innerHTML = (endTime - startTime) + "ms";
     }
+
 
 });
 </script>
