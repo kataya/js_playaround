@@ -87,6 +87,11 @@
   
   サンプルとして、今昔マップ on the Web のTile Map Service を表示。
 
+## worker-example.html, worker-buffer_v403.html, worker-buffer_v425.html
+  
+  * [API リファレンスにある最も簡単なworker を使ったアプリ](https://kataya.github.io/js_playaround/src/worker-example.html), [worker を使ったAPI Version 4.25 へ書き換えしたバッファー作成アプリ](https://kataya.github.io/js_playaround/src/worker-buffer_v425.html)  
+  "esri/core/workers" (Web Worker) を利用してバックグラウンドのスレッドでの処理を最初にやってみたもの。[workers の API リファレンス](https://developers.arcgis.com/javascript/latest/api-reference/esri-core-workers.html) や、Esri スペインの[2017年のweb-worker のデモアプリ](https://github.com/esri-es/conferencia-usuarios/tree/cb2aa513b4a6c77254a223778508de8238239b7e/2017/subiendo-nivel/demos/web-workers) をAPI Version 4.25 で動作するように改良した。
+  
 
 ## layers-feature-Collection.html
   
@@ -98,6 +103,7 @@
   
   * [テーブルでクリックしたセルの値を、グラフィックとして文字の描画 と Web Speech API で喋らせるアプリ](https://kataya.github.io/js_playaround/src/table-text-draw-speak.html)  
   マウス操作時の選択したセルの列によって、英語と日本語を喋り分けます。※このアプリでは地図は特に意味ありません。
+
 
 ## js3x_4x_mixmap.html
 
