@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Workers API v4.3 -> v4.25 に Update!</title>
+  <!--https://github.com/esri-es/conferencia-usuarios/tree/master/2017/subiendo-nivel/demos/web-workers-->
+  <style>
+    html,
+    body,
+    #viewDiv {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+  <!--
+  <link rel="stylesheet" href="https://js.arcgis.com/4.3/esri/css/main.css">
+  <script src="https://js.arcgis.com/4.3/"></script>
+  -->
+  <link rel="stylesheet" href="https://js.arcgis.com/4.25/esri/themes/light/main.css">
+  <script src="https://js.arcgis.com/4.25/"></script>
+  <script>
+    require([
+      "esri/config",
+      "esri/core/promiseUtils",
+      //"esri/core/workers/workers",
+      "esri/core/workers",
+      "esri/Map",
+      "esri/views/MapView",
+      "esri/geometry/Polygon",
+      "esri/symbols/SimpleFillSymbol",
+      "esri/symbols/SimpleMarkerSymbol",
+      "esri/geometry/geometryEngine",
+      "esri/Graphic",
+      "esri/geometry/support/webMercatorUtils",
+      "esri/geometry/projection",
+      "esri/core/workers/Connection"
+    ], function(
+      esriConfig,
+      promiseUtils, workers,
+      EsriMap, MapView, Polygon, SimpleFillSymbol, SimpleMarkerSymbol,
+      geometryEngine, Graphic, webMercatorUtils, projection, Connection
+    ) {
+
+      const map = new EsriMap({
+          basemap: "topo"
+      });
+
+      const view = new MapView({
+          container: "viewDiv",
+          map: map,
+          center: [-118.244, 34.052],
+          zoom: 12
+      });
+
+      const fill = new SimpleFillSymbol({
+          outline: {
+              color: [0, 197, 255, 1]
+          },
+          color: [0, 197, 255, 0]
+      })
+
+      const fill2 = new SimpleFillSymbol({
+          outline: {
+              color: [255, 55, 15, 1]
+          },
+          color: [0, 197, 255, 0]
+      })
+
+      const marker = new SimpleMarkerSymbol({
+          outline: {
+              color: [255, 255, 255, 1]
+          },
+          color: [0, 77, 168, 1]
+      });
+
+      //view.then(() => { // v4.3
+      view.when(() => { // v4.25
+          const extent = view.extent.toJSON();
+          const centroid = view.extent.center;
+          const pt = centroid.toJSON();
+          const local = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+          // v403 との違いをみるデバッグ用
+          console.log(view.extent.center.spatialReference.wkid, view.extent.center.x,  view.extent.center.y);
+          // 単純なworker を試す用
+          //const workerUrl = `${local}/workersFolder/Calculator.js`;
+          //workers.open(workerUrl)
+          //  .then((connection) => {
+          //    return connection.invoke("getMaxNumber", [0, 1, 2, 3, 4]);
+          //  })
+          //  .then((result) => {
+          //    console.log("getMaxNumber of [0, 1, 2, 3, 4] : " + result);
+          //  });
+
+          const workerUrl = `${local}/workersFolder/worker_v425.js`;
+          // v403 の元のコード
+          //workers.open({
+          //  progress: (msg) => {
+          //    console.log("progress:", msg);
+          //    return promiseUtils.resolve(msg);
+          //  }
+          //}, workerUrl)
+          //  .then(function(connection) {
+          //    return connection.invoke("magic", { extent });
+          //  })
+          // v425 用に書き換え
+          // ＋ connection の後始末を次のHelpを参考に追加
+          // https://developers.arcgis.com/javascript/latest/api-reference/esri-core-workers-Connection.html
+          let connection = null;
+          workers.open(workerUrl)
+            .then((conn) => { //(connection) => {
+                connection = conn;
+                return connection.invoke("magic", {extent});
+            })
+            .then((results) => {
+                const geometries = results.map(result => Polygon.fromJSON(result));
+                // v403 との違いをみるデバッグ用
+                console.log(geometries[0].centroid.spatialReference.wkid, geometries[0].centroid.x,  geometries[0].centroid.y);
+                const graphics = geometries.map(geometry => {
+                    return { symbol: fill, geometry };
+                });
+
+                // 最初、v403 と v425 でworker を使って作成したジオメトリの位置が異なったので確認用に赤色のグラフィックを追加
+                const ptBuff = geometryEngine.geodesicBuffer(centroid, 100000, "feet");
+                const bufgraphic = new Graphic({geometry: ptBuff, symbol: fill2});
+                view.graphics.add(bufgraphic);
+
+                graphics.push({ symbol: marker, geometry: centroid });
+                view.graphics.addMany(graphics);
+                view.goTo({
+                    target: geometries
+                });
+
+                // connection の後始末
+                connection.close();
+                connection = null;
+          });
+
+      });
+
+    });
+  </script>
+</head>
+
+<body>
+  <div id="viewDiv"></div>
+</body>
+
+</html>

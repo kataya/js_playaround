@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>esri core workers の Example をテスト</title>
+  <style>
+  html,
+  body,
+  #viewDiv {
+    padding: 0;
+    margin: 0;
+    height: 100%;
+    width: 100%;
+  }
+  #infoDiv {
+    position: absolute;
+    bottom: 15px;
+    right: 0;
+    max-height: 80%;
+    max-width: 300px;
+    background-color: black;
+    padding: 8px;
+    border-top-left-radius: 5px;
+    color: white;
+    opacity: 0.8;
+  }
+  #optionsDiv {
+    position: absolute;
+    top: 5px;
+    right: 0;
+    max-width: 800px;
+    padding: 10px;
+    z-index: 1;
+    background-color: black;
+    color: white;
+    opacity: 0.8;
+  }
+  select {
+    background: whitesmoke;
+    padding: 5px;
+    border: 1px solid #005e95;
+    font-size: 0.9em;
+    margin: 5px;
+    color: #696969;
+  }
+
+  button {
+    background: whitesmoke;
+    padding: 5px;
+    text-align: center;
+    border: 1px solid #005e95;
+    font-size: 0.9em;
+    margin: 5px;
+    color: #000000;
+  }
+
+  button:hover {
+    background: #005e95;
+    color: white;
+    cursor: pointer;
+  }
+  </style>
+
+  <link rel="stylesheet" href="https://js.arcgis.com/4.25/esri/themes/light/main.css">
+  <script src="https://js.arcgis.com/4.25/"></script>
+
+<script>
+require([
+    "esri/config",
+    "esri/views/SceneView",
+    "esri/Map",
+    "esri/layers/FeatureLayer",
+    "esri/layers/GraphicsLayer",
+    "esri/geometry/Point",
+    "esri/layers/support/LabelClass",
+    "esri/widgets/Legend",
+    "esri/request",
+    "esri/core/watchUtils",
+    "esri/core/workers"
+], (esriConfig, SceneView, Map, FeatureLayer, 
+    GraphicsLayer, Point, LabelClass, Legend, esriRequest, watchUtils,
+    workers) => {
+
+
+    /**************************************************
+    * Create the map and view
+    **************************************************/
+    const map = new Map({
+        basemap: "dark-gray"//,
+    });
+
+    // Create MapView
+    const view = new SceneView({
+        container: "viewDiv",
+        map: map,
+        center: [139.715512, 35.678257],
+        zoom: 3,//5,
+        // customize ui padding for legend placement
+        ui: {
+          padding: {
+            bottom: 15,
+            right: 0
+          }
+        }
+    });
+
+
+    var runWorkerButton = document.getElementById("runWorkerBtn");
+
+    runWorkerButton.addEventListener("click", function(event) {
+        clearInfo();
+        execWorker();
+    });
+
+    // Worker のHelp
+    // https://developers.arcgis.com/javascript/latest/api-reference/esri-core-workers.html
+
+    // worker テスト
+    // k {name: 'workers:undefined-module', details: undefined, message: 'modulePath is missing'}
+    function execWorker(){
+        
+        // a) Helpに記載されているこちらは動作しない
+        // https://developers.arcgis.com/javascript/latest/api-reference/esri-core-workers.html
+        // Set the path for the worker's AMD loader configuration
+        // to a folder called workersFolder.
+        /*
+        esriConfig.workers.loaderConfig = {
+          paths: {
+              myWorkers: new URL("./workersFolder", document.baseURI).href
+          }
+        };
+        
+        // load myWorkers/Calculator.js in the workers framework
+        // and invoke its "getMaxNumber" method
+        workers.open(this, "myWorkers/Calculator")
+          .then((connection) => {
+            return connection.invoke("getMaxNumber", [0, 1, 2, 3, 4]);
+          })
+          .then((result) => {
+            console.log(result);
+          });
+        */
+        
+        // b) 古いサンプルにあるこちらの方法は動作
+        // https://github.com/esri-es/conferencia-usuarios/blob/master/2017/subiendo-nivel/demos/web-workers/index.html
+        const local = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+        //const workerUrl = `${local}/worker.js`;
+        const workerUrl = `${local}/workersFolder/Calculator.js`;
+        //console.log(workerUrl);
+        
+        workers.open(workerUrl)
+          .then((connection) => {
+            return connection.invoke("getMaxNumber", [0, 1, 2, 3, 4]);
+            //return connection.invoke("getSum", [0, 1, 2, 3, 4]);
+          })
+          .then((result) => {
+            console.log("getMaxNumber of [0, 1, 2, 3, 4] : " + result);
+            document.getElementById('runInfo').innerHTML = "getMaxNumber of [0, 1, 2, 3, 4] : " + result;
+            //console.log("getSum of [0, 1, 2, 3, 4] : " + result);
+          });
+
+    }
+    
+    // 結果のクリア
+    function clearInfo(){
+        document.getElementById('runInfo').innerHTML = ""
+    }
+});
+</script>
+</head>
+
+<body>
+  <div id="viewDiv"></div>
+  <div id="optionsDiv">
+    <button id="runWorkerBtn" type="button">worker 実行</button><br>
+    <span id="runInfo"></span>
+  </div>
+</body>
+</html>
