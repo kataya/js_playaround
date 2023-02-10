@@ -5,13 +5,12 @@ define([
     "esri/Graphic"
 ], (Point, Graphic) => {
     return {
-        //funcname1: (param) =>{},
-        //funcname2: (param) =>{}
-        getEarthquakeGraphics: (geoJson) => {
+        //funcname1: ( {param} ) =>{},
+        //funcname2: ( {param} ) =>{}
+        getEarthquakeGraphics: ( {geoJson} ) => { //引数の{}忘れないように!
             
             const graphicsArray = [];
-            // 何故か一階層
-            geoJson.geoJson.features.forEach((function(feature, i){
+            geoJson.features.forEach((function(feature, i){
                 const pointGraphic = new Graphic({
                     geometry: new Point({
                         x: feature.geometry.coordinates[0],

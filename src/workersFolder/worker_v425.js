@@ -53,23 +53,8 @@ define([
             return sum;
         }
         ,// 書き換えしたmagic function
-        magic: function(extent) {
-
-            function getData(url){
-                //return Promise.all([esriRequest(url, {responseType: "json"})]);
-                esriRequest(url, {
-                    responseType: "json"
-                }).then(function(response) {
-                    return response;
-                });
-            }
-
-            const myurl = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson";
-            const response = getData(myurl);
-
-            //const area = Polygon.fromExtent(Extent.fromJSON(extent));
-            //引数extent のJSONオブジェクトがv403 の時と異なるみたいなのでextent.extent に変更
-            const area = Polygon.fromExtent(Extent.fromJSON(extent.extent));
+        magic: function( {extent} ) { //引数の{}忘れずに!
+            const area = Polygon.fromExtent(Extent.fromJSON(extent));
             const centroid = area.centroid;
             const buffers = [];
             for (let i = 100; i <= 100000; i = i + 100){
