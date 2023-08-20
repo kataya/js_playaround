@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <title>
+      経度緯度から1次～4次メッシュコードの計算結果の確認アプリ
+    </title>
+
+    <style>
+      html,
+      body,
+      #viewDiv {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+      }
+
+      #instruction {
+        z-index: 99;
+        position: absolute;
+        top: 15px;
+        left: 50%;
+        padding: 5px;
+        margin-left: -175px;
+        height: 30px;
+        width: 355px;
+        background: rgba(25, 25, 25, 0.8);
+        color: white;
+      }
+    </style>
+
+    <link
+      rel="stylesheet"
+      href="https://js.arcgis.com/4.27/esri/themes/light/main.css"
+    />
+    <script src="https://js.arcgis.com/4.27/"></script>
+
+    <script>
+    require(["esri/rest/locator", "esri/Map", "esri/views/MapView", "esri/Basemap", "esri/layers/FeatureLayer", "esri/Graphic", 
+    "esri/widgets/Search", "esri/widgets/LayerList", "esri/widgets/Expand"], (
+        locator,
+        Map,
+        MapView,
+        Basemap,
+        FeatureLayer,
+        Graphic,
+        Search,
+        LayerList,
+        Expand
+    ) => {
+        // *******************************************************************
+        // 経度緯度から1次～4次メッシュコードの計算結果の確認アプリ
+        // 
+        // 「Intro to popups」のサンプルをもとに変更
+        // https://developers.arcgis.com/javascript/latest/sample-code/intro-popup/
+        //
+        // *******************************************************************
+        
+        // *******************************************************************
+        // 
+        // 共通で利用する関数
+        // 
+        // *******************************************************************
+        // Simple-fill Renderer の作成用の関数定義
+        function create_mesh_renderer(line_width=1.0, line_color="black", label="Mesh ") {
+            return {
+                type: "simple", // autocasts as new SimpleRenderer()
+                symbol: {
+                    type: "simple-fill", // autocasts as new SimpleFillSymbol()
+                    style: "none",
+                    outline: { // autocasts as new SimpleLineSymbol()
+                        style: "solid",
+                        width: line_width,
+                        color: line_color
+                    }
+                },
+                label: label,
+            }
+        }
+        
+        // labelingInfo の作成用の関数定義
+        function create_mesh_labelclass(label_color="black", label_size=20, label_expression="$feature.MESH1_ID") {
+            return {
+                symbol: {
+                    type: "text",
+                    color: label_color,
+                },
+                font: {
+                  size: label_size,
+                  weight: "bold"
+                },
+                labelExpressionInfo: {
+                    expression: label_expression
+                }
+            }
+        }
+        
+        // *******************************************************************
+        // 1次～4次メッシュのFeatureLayer
+        // MESH1 - MESH1_ID (type: esriFieldTypeString
+        //   https://services.arcgis.com/wlVTGRSYTzAbjjiC/ArcGIS/rest/services/MESH1/FeatureServer/0
+        // MESH2 - MESH2_ID (type: esriFieldTypeString
+        //   https://services.arcgis.com/P3ePLMYs2RVChkJx/ArcGIS/rest/services/JPN_Boundaries_ECM/FeatureServer/2
+        // MESH3 - MESH3_ID (type: esriFieldTypeString
+        //   https://services.arcgis.com/P3ePLMYs2RVChkJx/ArcGIS/rest/services/JPN_Boundaries_ECM/FeatureServer/4
+        // MESH4 - MESH4_ID (type: esriFieldTypeString
+        //   https://services.arcgis.com/P3ePLMYs2RVChkJx/ArcGIS/rest/services/JPN_Boundaries_ECM/FeatureServer/5
+        // *******************************************************************
+        // 1次～4次メッシュのレイヤー定義
+        const mesh1_renderer = create_mesh_renderer(2.0, "red", "Mesh1 ");
+        const mesh1_labelclass = create_mesh_labelclass("red", 20, "$feature.MESH1_ID");
+        const mesh1_layer = new FeatureLayer({
+            url: "https://services.arcgis.com/wlVTGRSYTzAbjjiC/ArcGIS/rest/services/MESH1/FeatureServer/0",
+            id: "mesh1_layer",
+            title: "Mesh1 - Layer",
+            renderer: mesh1_renderer,
+            outFields: ["*"],
+            labelingInfo: [mesh1_labelclass]
+        });
+
+        const mesh2_renderer = create_mesh_renderer(1.0, "blue", "Mesh2 ");
+        const mesh2_labelclass = create_mesh_labelclass("blue", 18, "$feature.MESH2_ID");
+        const mesh2_layer = new FeatureLayer({
+            url: "https://services.arcgis.com/P3ePLMYs2RVChkJx/ArcGIS/rest/services/JPN_Boundaries_ECM/FeatureServer/2",
+            id: "mesh2_layer",
+            title: "Mesh2 - Layer",
+            renderer: mesh2_renderer,
+            outFields: ["*"],
+            labelingInfo: [mesh2_labelclass],
+            minScale: 500000,
+        });
+        
+        const mesh3_renderer = create_mesh_renderer(0.4, "green", "Mesh3 ");
+        const mesh3_labelclass = create_mesh_labelclass("green", 16, "$feature.MESH3_ID");
+        const mesh3_layer = new FeatureLayer({
+            url: "https://services.arcgis.com/P3ePLMYs2RVChkJx/ArcGIS/rest/services/JPN_Boundaries_ECM/FeatureServer/4",
+            id: "mesh3_layer",
+            title: "Mesh3 - Layer",
+            renderer: mesh3_renderer,
+            outFields: ["*"],
+            labelingInfo: [mesh3_labelclass],
+            minScale: 100000,
+        });
+        
+        const mesh4_layer = new FeatureLayer({
+            url: "https://services.arcgis.com/P3ePLMYs2RVChkJx/ArcGIS/rest/services/JPN_Boundaries_ECM/FeatureServer/5",
+            id: "mesh4_layer",
+            outFields: ["*"],
+        });
+
+        const map = new Map({
+            basemap: new Basemap(
+                {portalItem: {id: "accf3eff22254ed69e23afeb094a4881"}} //"street-vector"の日本語版
+            ),
+        });
+            
+        map.add(mesh1_layer, 0);
+        map.add(mesh2_layer, 1);
+        map.add(mesh3_layer, 2);
+
+        const view = new MapView({
+            container: "viewDiv",
+            map: map,
+            //center : [139.8003972,35.7165044], // 皇居周辺
+            center : [140.88867187, 38.25974980], //仙台駅周辺
+            zoom: 6
+        });
+        
+        const layerList = new LayerList({
+            view: view
+        });
+        const layerListExpand = new Expand({
+            expandIcon: "layers",
+            view: view,
+            content: layerList
+        });
+        view.ui.add(layerListExpand, "bottom-right");
+        
+        const search = new Search({
+            view: view
+        });
+        view.ui.add(search, "top-right");
+        
+        // *******************************************************************
+        // 今回のメイン
+        // 経度緯度をもとに1次～4次メッシュコードを計算する関数定義
+        //
+        // 緯度経度から1次,2次,3次メッシュコードは次を参照にした
+        // - 世界測地系と座標変換、飛田幹男著、p150
+        // - 4次メッシュについては上記を参考に拡張
+        // *******************************************************************
+        function lonlat_to_mesh(xlon, ylat, mesh_num = 4){
+            let mesh_code = {}
+            const DELTA = 0.00000000001
+            //1次メッシュコード
+            const lat1 = parseInt( 1.5*ylat );
+            const lon1 = parseInt( xlon ) - 100;
+            const latlon1 = lat1*100 + lon1; //各メッシュコードの桁数にする
+            mesh_code["MESH1"] = latlon1;
+            if (mesh_num === 1) { return mesh_code; }
+            
+            //2次メッシュコード
+            const lat2 = parseInt( 8.0*(1.5*ylat - lat1) ); // or parseInt( 12.0*ylat - 8.0*lat1 )
+            const lon2 = parseInt( 8.0*(xlon - (lon1+100)) );
+            const latlon2 = lat2*10 + lon2;
+            mesh_code["MESH2"] = latlon2;
+            if (mesh_num === 2) { return mesh_code; }
+            
+            //3次メッシュコード
+            const lat3 = parseInt( 10.0*(12.0*ylat - 8.0*lat1 - lat2) + DELTA );
+            const lon3 = parseInt( 10.0*( 8.0*(xlon-(lon1+100)) - lon2) + DELTA );
+            const latlon3 = lat3*10 + lon3;
+            mesh_code["MESH3"] = latlon3;
+            if (mesh_num === 3) { return mesh_code; }
+            
+            //4次メッシュコード
+            const lat4 = parseInt( 2.0*(120.0*ylat - 80.0*lat1 - 10.0*lat2 - lat3) + DELTA );
+            const lon4 = parseInt( 2.0*( 10.0*( 8.0*(xlon-(lon1+100)) - lon2 ) - lon3) + DELTA );
+            const latlon4 = parseInt( Math.pow(2,lat4) ) + (lat4 + lon4);
+            mesh_code["MESH4"] = latlon4;
+            if (mesh_num === 4) { return mesh_code; }
+            
+            return mesh_code;
+        }
+
+        // *******************************************************************
+        // 計算ロジックの確認用
+        // 計算した4次メッシュコードと一致するグラフィックをフィーチャレイヤーからクエリしてグラフィックとテキストで描画
+        // *******************************************************************
+        async function query_mesh4(mesh4_code) {
+            view.graphics.removeAll();
+            
+            const queryParams = mesh4_layer.createQuery();
+            queryParams.where = "MESH4_ID = '" + mesh4_code + "'";
+            queryParams.returnGeometry = true;
+            
+            await mesh4_layer.queryFeatures(queryParams)
+                .then((results) => {
+                    if (results.features.length > 0) {
+                        // 結果をもとに4次メッシュのグラフィックを作成
+                        const graphics = results.features.map((feature) => {
+                            const graphic = feature.clone();
+                            graphic.symbol = {
+                                type: "simple-fill",
+                                style: "none",
+                                outline: {
+                                      color: "#00ffff",
+                                      width: "5px"
+                                }
+                            };
+                            return graphic;
+                        });
+                        view.graphics.addMany( graphics );
+                        // メッシュコード用のTextSymbolを作成
+                        const graphics2 = results.features.map((feature) => {
+                            const graphic = new Graphic({
+                                geometry: feature.geometry,
+                                symbol: {
+                                    type: "text",
+                                    text: mesh4_code,
+                                    color: "purple",
+                                    font: {
+                                        size: 14
+                                    }
+                                }
+                            });
+                            return graphic;
+                        });
+                        view.graphics.addMany( graphics2 );
+                        
+                        // グラフィックへズーム
+                        //view.goTo(graphics);
+                    } else {
+                        const err_graphic = new Graphic({
+                            geometry: feature.geometry,
+                            symbol: {
+                                type: "text",
+                                text: "error: " + mesh4_code ,
+                                color: "purple",
+                                font: {
+                                    size: 14
+                                }
+                            }
+                        });
+                        view.graphics.addMany( err_graphic );
+                    }
+              })
+              .catch((e) => {
+                    console.log(e);
+              });
+        }
+
+        // *******************************************************************
+        // 遊び機能
+        // Web Speech API でブラウザに喋らせる
+        // *******************************************************************
+        function speak_mesh(mesh_code) {
+            let uttr = new SpeechSynthesisUtterance();
+            let speaktxt = "";
+            for (let [key, value] of Object.entries(mesh_code)) {
+                //console.log(key + ' : ' + value);
+                speaktxt += key + ' - ' + value + '、';
+            }
+            uttr.text = speaktxt;
+            uttr.lang = 'ja-JP';
+            speechSynthesis.speak(uttr);
+        }
+
+        // *******************************************************************
+        // クリックのイベントで取得できる経度と緯度をもとに1次～4次メッシュコードの計算
+        // 計算結果が正しいか確認するために、グラフィック表示、ポップアップ表示、喋る機能を追加している
+        // *******************************************************************
+        view.popupEnabled = false;
+        view.on("click", (event) => {
+            // Get the coordinates of the click on the view
+            const lat = event.mapPoint.latitude;
+            const lon = event.mapPoint.longitude;
+            const dis_lat = Math.round(lat * 10000) / 10000;
+            const dis_lon = Math.round(lon * 10000) / 10000;
+            
+            // クリック地点の経度と緯度から1次～4次メッシュコードを計算
+            const mesh_code = lonlat_to_mesh(lon, lat); // デフォルトは4次メッシュコードまで
+            //console.log(mesh_code);
+            //for (let [key, value] of Object.entries(mesh_code)) {
+            //    console.log(key + ' : ' + value);
+            //}
+            const str_mesh_code4 = Object.values(mesh_code).join(""); // 値だけを取り出してjoin して文字列のコードにする
+            const str_mesh_code3 = str_mesh_code4.slice(0,8);
+            const str_mesh_code2 = str_mesh_code4.slice(0,6);
+            const str_mesh_code1 = str_mesh_code4.slice(0,4);
+            
+            // 計算結果の4次メッシュのコードをもとに、地図上に表示
+            query_mesh4(str_mesh_code4);
+            
+            // ポップアップに1次～4次メッシュのコードを表示
+            view.openPopup({
+                // Set the popup's title to the coordinates of the location
+                title: "Mesh code: [経度 " + dis_lon + ", 緯度 " + dis_lat + "]",
+                content: "Mesh1: " + str_mesh_code1 + "<br>Mesh2: " + str_mesh_code2 + "<br>Mesh3: " + str_mesh_code3 + "<br>Mesh4: " + str_mesh_code4,
+                location: event.mapPoint // Set the location of the popup to the clicked location
+            });
+
+            // 遊びでWeb Speech API で喋らせる
+            speak_mesh(mesh_code);
+            
+        });
+      });
+    </script>
+  </head>
+
+  <body>
+    <div id="viewDiv"></div>
+    <div id="instruction" class="esri-widget">
+      メッシュコードを知りたい地点をマップでクリック！
+    </div>
+  </body>
+</html>
