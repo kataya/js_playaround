@@ -193,36 +193,37 @@
         // 緯度経度から1次,2次,3次メッシュコードは次を参照にした
         // - 世界測地系と座標変換、飛田幹男著、p150
         // - 4次メッシュについては上記を参考に拡張
+        // 2023.8.22 - 2次メッシュと3次メッシュは 00 の値をとるので、mesh_code には文字列で格納するようにした
         // *******************************************************************
         function lonlat_to_mesh(xlon, ylat, mesh_num = 4){
             let mesh_code = {}
             const DELTA = 0.00000000001
-            //1次メッシュコード
+            //1次メッシュコード 4桁
             const lat1 = parseInt( 1.5*ylat );
             const lon1 = parseInt( xlon ) - 100;
             const latlon1 = lat1*100 + lon1; //各メッシュコードの桁数にする
-            mesh_code["MESH1"] = latlon1;
+            mesh_code["MESH1"] = latlon1.toString().padStart(4,'0');;
             if (mesh_num === 1) { return mesh_code; }
             
-            //2次メッシュコード
+            //2次メッシュコード 2桁
             const lat2 = parseInt( 8.0*(1.5*ylat - lat1) ); // or parseInt( 12.0*ylat - 8.0*lat1 )
             const lon2 = parseInt( 8.0*(xlon - (lon1+100)) );
-            const latlon2 = lat2*10 + lon2;
-            mesh_code["MESH2"] = latlon2;
+            const latlon2 = lat2*10 + lon2; // 00 to 77
+            mesh_code["MESH2"] = latlon2.toString().padStart(2,'0');
             if (mesh_num === 2) { return mesh_code; }
             
-            //3次メッシュコード
+            //3次メッシュコード 2桁
             const lat3 = parseInt( 10.0*(12.0*ylat - 8.0*lat1 - lat2) + DELTA );
             const lon3 = parseInt( 10.0*( 8.0*(xlon-(lon1+100)) - lon2) + DELTA );
-            const latlon3 = lat3*10 + lon3;
-            mesh_code["MESH3"] = latlon3;
+            const latlon3 = lat3*10 + lon3; // 00 to 99
+            mesh_code["MESH3"] = latlon3.toString().padStart(2,'0');
             if (mesh_num === 3) { return mesh_code; }
             
-            //4次メッシュコード
+            //4次メッシュコード 1桁
             const lat4 = parseInt( 2.0*(120.0*ylat - 80.0*lat1 - 10.0*lat2 - lat3) + DELTA );
             const lon4 = parseInt( 2.0*( 10.0*( 8.0*(xlon-(lon1+100)) - lon2 ) - lon3) + DELTA );
             const latlon4 = parseInt( Math.pow(2,lat4) ) + (lat4 + lon4);
-            mesh_code["MESH4"] = latlon4;
+            mesh_code["MESH4"] = latlon4.toString().padStart(1,'0');
             if (mesh_num === 4) { return mesh_code; }
             
             return mesh_code;
@@ -232,7 +233,8 @@
         // 計算ロジックの確認用
         // 計算した4次メッシュコードと一致するグラフィックをフィーチャレイヤーからクエリしてグラフィックとテキストで描画
         // *******************************************************************
-        async function query_mesh4(mesh4_code) {
+        async function query_mesh4(mesh4_code, click_point) {
+        
             view.graphics.removeAll();
             
             const queryParams = mesh4_layer.createQuery();
@@ -277,17 +279,17 @@
                         //view.goTo(graphics);
                     } else {
                         const err_graphic = new Graphic({
-                            geometry: feature.geometry,
+                            geometry: click_point,
                             symbol: {
                                 type: "text",
-                                text: "error: " + mesh4_code ,
+                                text: "No mesh4: " + mesh4_code ,
                                 color: "purple",
                                 font: {
                                     size: 14
                                 }
                             }
                         });
-                        view.graphics.addMany( err_graphic );
+                        view.graphics.add( err_graphic );
                     }
               })
               .catch((e) => {
@@ -335,7 +337,7 @@
             const str_mesh_code1 = str_mesh_code4.slice(0,4);
             
             // 計算結果の4次メッシュのコードをもとに、地図上に表示
-            query_mesh4(str_mesh_code4);
+            query_mesh4(str_mesh_code4, event.mapPoint);
             
             // ポップアップに1次～4次メッシュのコードを表示
             view.openPopup({
