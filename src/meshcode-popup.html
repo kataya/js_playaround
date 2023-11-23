@@ -150,6 +150,7 @@
         const mesh4_layer = new FeatureLayer({
             url: "https://services.arcgis.com/P3ePLMYs2RVChkJx/ArcGIS/rest/services/JPN_Boundaries_ECM/FeatureServer/5",
             id: "mesh4_layer",
+            title: "Mesh4 - Layer",
             outFields: ["*"],
         });
 
@@ -181,8 +182,42 @@
         });
         view.ui.add(layerListExpand, "bottom-right");
         
+        // 2023.11.23 - SearchWidgetを住所検索から、メッシュコードの検索になるように変更
         const search = new Search({
-            view: view
+            view: view,
+            allPlaceholder: "メッシュコードで検索",
+            includeDefaultSources: false, // デフォルトのジオコーダーを無効化
+            locationEnabled: false, // 現在位置の使用を無効化
+            sources: [
+                {
+                    layer: mesh1_layer,
+                    searchFields: ["MESH1_ID"],
+                    outFields: ["MESH1_ID"],
+                    exactMatch: true,
+                    maxSuggestions: 1,
+                },
+                {
+                    layer: mesh2_layer,
+                    searchFields: ["MESH2_ID"],
+                    outFields: ["MESH2_ID"],
+                    exactMatch: true,
+                    maxSuggestions: 1,
+                },
+                {
+                    layer: mesh3_layer,
+                    searchFields: ["MESH3_ID"],
+                    outFields: ["MESH3_ID"],
+                    exactMatch: true,
+                    maxSuggestions: 1,
+                },
+                {
+                    layer: mesh4_layer,
+                    searchFields: ["MESH4_ID"],
+                    outFields: ["MESH4_ID"],
+                    exactMatch: true,
+                    maxSuggestions: 1,
+                }
+            ]
         });
         view.ui.add(search, "top-right");
         
