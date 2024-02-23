@@ -357,8 +357,10 @@
             // Get the coordinates of the click on the view
             const lat = event.mapPoint.latitude;
             const lon = event.mapPoint.longitude;
-            const dis_lat = Math.round(lat * 10000) / 10000;
-            const dis_lon = Math.round(lon * 10000) / 10000;
+            // 行政基本情報データ連携モデル - 10進表記で小数点以下6桁とする に揃える
+            // https://cio.go.jp/sites/default/files/uploads/documents/1015-4_gyousei_data_model_geo.pdf
+            const dis_lat = Math.round(lat * 1000000) / 1000000;
+            const dis_lon = Math.round(lon * 1000000) / 1000000;
             
             // クリック地点の経度と緯度から1次～4次メッシュコードを計算
             const mesh_code = lonlat_to_mesh(lon, lat); // デフォルトは4次メッシュコードまで
@@ -377,8 +379,10 @@
             // ポップアップに1次～4次メッシュのコードを表示
             view.openPopup({
                 // Set the popup's title to the coordinates of the location
-                title: "Mesh code: [経度 " + dis_lon + ", 緯度 " + dis_lat + "]",
-                content: "Mesh1: " + str_mesh_code1 + "<br>Mesh2: " + str_mesh_code2 + "<br>Mesh3: " + str_mesh_code3 + "<br>Mesh4: " + str_mesh_code4,
+                title: "Mesh code",
+                content: "Mesh1: " + str_mesh_code1 + "<br>Mesh2: " + str_mesh_code2
+                       + "<br>Mesh3: " + str_mesh_code3 + "<br>Mesh4: " + str_mesh_code4
+                       + "<br>経度: " + dis_lon + "<br>緯度: " + dis_lat , // コピペしやすいようにcontent へ
                 location: event.mapPoint // Set the location of the popup to the clicked location
             });
 
