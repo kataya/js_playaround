@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Custom TileLayer - 4.29</title>
+  <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
+  <script src="https://js.arcgis.com/4.29/"></script>
+  <style>
+    html,
+    body,
+    #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+    
+    #rightSlider {
+        position: absolute;
+        bottom: 5px;
+        left: -200px;
+        height:90px;
+        width: 200px;
+        text-align: center;
+        padding: 10px 5px 0 10px;
+    }
+    
+    #leftSlider {
+        position: absolute;
+        bottom: 5px;
+        height:90px;
+        width: 280px;
+        text-align: center;
+        padding: 10px 5px 0 10px;
+    }
+    
+    #lslider, #rslider {
+        width: 95%;
+        padding: 0;
+        height: 60px;
+    }
+
+    #instruction {
+        z-index: 99;
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        padding: 5px;
+        margin-left: -175px;
+        height: 30px;
+        width: 440px;
+        background: rgba(25, 25, 25, 0.8);
+        color: white;
+        text-align: center;
+    }
+  </style>
+  <script>
+    require([
+      "esri/Map",
+      "esri/Basemap",
+      "esri/views/MapView",
+      "esri/widgets/Swipe",
+      "esri/widgets/Expand",
+      "esri/widgets/BasemapToggle",
+      "esri/widgets/Slider",
+      "esri/layers/WebTileLayer",
+      "esri/core/reactiveUtils",
+    ], function(Map, Basemap, MapView, Swipe, Expand, BasemapToggle, Slider, WebTileLayer, reactiveUtils) {
+    
+    // *******************************************************
+    // ArcGIS API for JavaScript 4.x での TMSLayer の実装例
+    //   TMSLayer を WebTileLayer のサブクラスとして実装し、
+    //   getTileUrl() メソッドをオーバーライド
+    // *******************************************************
+    const TMSLayer = WebTileLayer.createSubclass({
+        getTileUrl: function(level, row, col){
+            //const y = Math.pow(2, level) - row - 1;
+            const y = (1 << level) - row - 1; // シフト演算の方を採用
+            return this.urlTemplate.replace("{level}", level).replace("{col}", col).replace("{row}", y);
+        }
+    });
+
+    // *******************************************************
+    // 参考： maps.nyc.gov でのTMSLayer の実装例
+    //   https://maps.nyc.gov/tiles/#arcgis4-xyz
+    // ******************************************************* 
+    /*       
+    var TMSLayer = WebTileLayer.createSubclass({
+        getTileUrl: function(level, row, col){
+          var supermethod = this.getInherited(arguments);
+          var y = Math.pow(2, level) - row - 1;
+          return supermethod.call(this, level, y, col);
+        }
+    }); 
+    */
+
+    // *******************************************************
+    // JavaScript application の開始
+    // *******************************************************
+    // TMSLayer のインスタンスを作成し、プロパティを設定
+    const rapidLayer = new TMSLayer({
+        //歴史的農業環境閲覧システム
+        // https://habs.rad.naro.go.jp/ で読み込みしている「迅速測図」のタイル
+        urlTemplate: "https://habs.rad.naro.go.jp/rapid16/{level}/{col}/{row}.png",
+        opacity: 0.9,
+        title: "迅速測図",
+        copyright: "農研機構農業環境研究部門",
+        visible: true
+    });
+
+    // TMSLayer のインスタンスをマップに追加
+    const map = new Map({
+        layers:[rapidLayer],
+        basemap: "topo", // レガシー
+    });
+
+    // map を MapView に追加
+    const view = new MapView({
+        container: "viewDiv",
+        map: map,
+        center: [139.715512, 35.678257],
+        zoom: 15
+    });
+
+    // BasemapToggle widget を使ってベースマップを地理院タイルと切替
+    const toggle = new BasemapToggle({
+        view: view,
+        nextBasemap: new Basemap(
+        {
+            baseLayers:[new WebTileLayer({
+                urlTemplate: "https://cyberjapandata.gsi.go.jp/xyz/pale/{level}/{col}/{row}.png",
+                copyright: "地理院タイル （https://maps.gsi.go.jp/development/ichiran.html）"
+            })],
+            title: "地理院タイル - 淡色地図",
+            id: "palemap",
+            thumbnailUrl: "https://cyberjapandata.gsi.go.jp/xyz/pale/12/3637/1612.png"
+        })
+    });
+    view.ui.add(toggle, "bottom-left")
+
+    // Swipe widget で迅速測図とベースマップをスワイプして確認できるようにする
+    const swipe = new Swipe({
+        //leadingLayers: [layername],// 今回は未使用
+        trailingLayers: [rapidLayer], //
+        position: 50,  // widget の位置を50％に設定
+        view: view
+    });
+    view.ui.add(swipe);
+    
+    // Slider Widget を使って迅速測図の透過率を変更できるようにする
+    const opaSlider = new Slider({
+        container: "rslider",
+        min: 0,
+        max: 100,
+        values: [90],
+        steps: 1,
+        visibleElements : {
+            labels: true,
+        }
+    });
+    opaSlider.on("thumb-drag", (value) => {
+        rapidLayer.opacity = opaSlider.values[0]/100;
+        document.getElementById("opacity").innerText = "迅速測図 : 透過率 " + opaSlider.values[0];
+    });
+    const opaSliderExpand = new Expand({
+        view: view,
+        content: document.getElementById("rightSlider"),
+    });
+    view.ui.add(opaSliderExpand, {
+        position: "bottom-right"
+    });
+    
+    // Slider Widget を使って地理院タイルの WebTileLayer.effect = "grayscale(xx%)" でグレイスケールを適用する操作
+    const effSlider = new Slider({
+        container: "lslider",
+        min: 0,
+        max: 100,
+        values: [0],
+        steps: 1,
+        visibleElements : {
+            labels: true,
+        },
+        disabled: true,
+    });
+    effSlider.on("thumb-drag", (value) => {
+        if (map.basemap.id == "palemap") {
+            let layer = map.basemap.baseLayers.at(0);
+            const val = effSlider.values[0];
+            layer.effect = "grayscale(" + val + "%)";
+            document.getElementById("grayscale").innerText = "地理院タイル Effect : grayscale(" + val + "%)";
+        }
+    });
+    const effSliderExpand = new Expand({
+        view: view,
+        expandIcon: "effects",
+        content: document.getElementById("leftSlider"),
+        disabled: true,
+    });
+    view.ui.add(effSliderExpand, {
+        position: "bottom-left"
+    });
+    
+    // 地理院タイルのときだけ Effect 操作可能な reactiveUtils.watch を使って制御
+    reactiveUtils.watch(
+        () => map.basemap,
+        (basemap) => {
+            if (basemap.id == "palemap") {
+                effSlider.disabled = false;
+            } else {
+                effSlider.disabled = true;
+            }
+        }
+    );
+    
+    });
+  </script>
+</head>
+
+<body>
+    <div id="viewDiv"></div>
+    <div id="leftSlider" class="esri-widget">
+        <div id="grayscale"><span>地理院タイル Effect : grayscale(0%)</span></div>
+        <div id="lslider"></div>
+    </div>
+    <div id="rightSlider" class="esri-widget">
+        <div id="opacity"><span>迅速測図 : 透過率 90</span></div>
+        <div id="rslider"></div>
+    </div>
+    <div id="instruction" class="esri-widget">
+      レイヤーを拡張して「Tile Map Service の 迅速測図」を表示！
+    </div>
+</body>
+
+</html>

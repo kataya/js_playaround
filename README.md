@@ -89,11 +89,13 @@
   ArcGIS API for JavaScript 4.18 から Expression式　などAPIで非対応だったベクタータイルのスタイルに対応したため、地理院地図Vectorの標準地図 と、Satellite や地理院タイルとスワイプして確認できるサンプルアプリ。遊びでレイヤーの透過率を1%ずつ変更して、アハ体験ができる機能も追加してみました。
   ![SwipeGSIStdVectorMap](https://github.com/kataya/js_playaround/blob/branch-image/images/app_SwipeGSIStdVectorMap.png?raw=true)
 
-## TmsTile.html
+## TmsTile.html, TmsTile_v429.html
 
 * 開発者向けブログ「[レイヤーを拡張して「Tile Map Service」のサービスを表示](https://community.esri.com/t5/arcgis-%E9%96%8B%E7%99%BA%E8%80%85%E3%82%B3%E3%83%9F%E3%83%A5%E3%83%8B%E3%83%86%E3%82%A3-documents/%E3%83%AC%E3%82%A4%E3%83%A4%E3%83%BC%E3%82%92%E6%8B%A1%E5%BC%B5%E3%81%97%E3%81%A6-tile-map-service-%E3%81%AE%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E3%82%92%E8%A1%A8%E7%A4%BA/ta-p/915294) 」のソースコード
   
   サンプルとして、今昔マップ on the Web のTile Map Service を表示。
+
+* ArcGIS Maps SDK for JavaScript 4.29 にバージョンアップし、[歴史的農業環境閲覧システム](https://habs.rad.naro.go.jp/) で読み込みしている 迅速測図 の Tile Map Service を表示するように変更した[サンプルアプリ](https://kataya.github.io/js_playaround/src/TmsTile_v429.html) ： [ソース](https://github.com/kataya/js_playaround/blob/master/src//TmsTile_v429.html) 。 
 
 ## worker-example.html, worker-buffer_v403.html, worker-buffer_v425.html
   
