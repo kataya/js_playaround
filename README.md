@@ -95,7 +95,7 @@
   
   サンプルとして、今昔マップ on the Web のTile Map Service を表示。
 
-* ArcGIS Maps SDK for JavaScript 4.29 にバージョンアップし、[歴史的農業環境閲覧システム](https://habs.rad.naro.go.jp/) で読み込みしている 迅速測図 の Tile Map Service を表示するように変更した[サンプルアプリ](https://kataya.github.io/js_playaround/src/TmsTile_v429.html) ： [ソース](https://github.com/kataya/js_playaround/blob/master/src//TmsTile_v429.html) 。 
+* ArcGIS Maps SDK for JavaScript 4.29 にバージョンアップし、[歴史的農業環境閲覧システム](https://habs.rad.naro.go.jp/) で読み込みしている 迅速測図 の Tile Map Service を表示するように変更した[サンプルアプリ](https://kataya.github.io/js_playaround/src/TmsTile_v429.html) ： [ソース](https://github.com/kataya/js_playaround/blob/master/src/TmsTile_v429.html) 。  
 
 ## worker-example.html, worker-buffer_v403.html, worker-buffer_v425.html
   
