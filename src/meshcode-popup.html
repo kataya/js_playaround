@@ -1,44 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="initial-scale=1,maximum-scale=1,user-scalable=no"
-    />
-    <title>
-      経度緯度から1次～4次メッシュコードの計算結果の確認アプリ
-    </title>
-
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+        <title>
+          経度緯度から1次～4次メッシュコードの計算結果の確認アプリ
+        </title>
+        <script type="module" src=https://js.arcgis.com/calcite-components/2.9.0/calcite.esm.js></script>
+        <link rel="stylesheet" type="text/css" href=https://js.arcgis.com/calcite-components/2.9.0/calcite.css />
+        <script src="https://js.arcgis.com/4.29/"></script>
+        <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
+    </head>
     <style>
-      html,
-      body,
-      #viewDiv {
+        html,
+        body,
+        #viewDiv {
         padding: 0;
         margin: 0;
         height: 100%;
         width: 100%;
-      }
+        }
 
-      #instruction {
-        z-index: 99;
-        position: absolute;
-        top: 15px;
-        left: 50%;
-        padding: 5px;
-        margin-left: -175px;
-        height: 30px;
-        width: 355px;
-        background: rgba(25, 25, 25, 0.8);
-        color: white;
-      }
+        body {
+        display: flex;
+        }
+    
+        .label-wrapper {
+          display: flex;
+          margin-inline: 1rem;
+          padding: 0.5rem;
+          border: 1px solid var(--calcite-ui-border-1);
+          cursor: pointer;
+        }
+        
+        #instruction {
+            z-index: 99;
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            padding: 5px;
+            margin-left: -175px;
+            height: 30px;
+            width: 355px;
+            background: rgba(25, 25, 25, 0.8);
+            color: white;
+        }
+
+        #header {
+          display: flex;
+          padding: 0 1rem;
+          background-color: var(--calcite-ui-foreground-1);
+        }
+
+        #header-controls {
+          display: flex;
+          margin-inline-start: auto;
+          align-self: center;
+        }
+
+        .label-wrapper {
+          display: flex;
+          margin-inline: 1rem;
+          padding: 0.5rem;
+          border: 1px solid var(--calcite-ui-border-1);
+          cursor: pointer;
+        }
+
+        calcite-switch {
+          margin: 0 0.5rem;
+        }
+
+        
     </style>
-
-    <link
-      rel="stylesheet"
-      href="https://js.arcgis.com/4.27/esri/themes/light/main.css"
-    />
-    <script src="https://js.arcgis.com/4.27/"></script>
+    
 
     <script>
     require(["esri/rest/locator", "esri/Map", "esri/views/MapView", "esri/Basemap", "esri/layers/FeatureLayer", "esri/Graphic", 
@@ -221,6 +255,18 @@
         });
         view.ui.add(search, "top-right");
         
+        // 2024.6.8 - 住所検索のSearchWidget もあった方が便利なので左へ配置
+        const searchAddress = new Search({
+            view: view,
+            locationEnabled: false, // 現在位置の使用を無効化
+        });
+        const searchAddressExpand = new Expand({
+            expandIcon: "search",
+            view: view,
+            content: searchAddress
+        });
+        view.ui.add(searchAddressExpand, "top-left");
+        
         // *******************************************************************
         // 今回のメイン
         // 経度緯度をもとに1次～4次メッシュコードを計算する関数定義
@@ -387,17 +433,33 @@
             });
 
             // 遊びでWeb Speech API で喋らせる
-            speak_mesh(mesh_code);
+            if (document.querySelector("calcite-switch").checked) {
+                speak_mesh(mesh_code);
+            };
             
         });
       });
     </script>
-  </head>
+
 
   <body>
-    <div id="viewDiv"></div>
-    <div id="instruction" class="esri-widget">
-      メッシュコードを知りたい地点をマップでクリック！
-    </div>
+    <!--2024.6.8 Calcite を使ってWeb Speech　APIの読み上げをSwitch で切替を追加-->
+    <calcite-shell content-behind>
+        <div slot="header" id="header">
+            <calcite-navigation-logo id="nav-logo" slot="logo"
+                heading="経度緯度から1次～4次メッシュコードの計算結果の確認アプリ" description=""></calcite-navigation-logo>
+            <div id="header-controls">
+                <calcite-label layout="inline" class="label-wrapper">
+                Web Speech API で読上げ: Off
+                <calcite-switch></calcite-switch>
+                On
+                </calcite-label>
+            </div>
+        </div>
+        <div id="viewDiv"></div>
+        <div id="instruction" class="esri-widget">
+          メッシュコードを知りたい地点をマップでクリック！
+        </div>
+    </calcite-shell>
   </body>
 </html>
