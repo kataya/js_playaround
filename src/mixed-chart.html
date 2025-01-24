@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <title>Mixed Chart | Chart.js</title>
+    <!-- Load Calcite-components  library -->
+    <script src="https://js.arcgis.com/calcite-components/2.13.0/calcite.esm.js" type="module"></script>
+    <link rel="stylesheet" href="https://js.arcgis.com/calcite-components/2.13.0/calcite.css" />
+    <!-- Load the Chart.js library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <!-- Load ArcGIS API for JavaScript -->
+    <script src="https://js.arcgis.com/4.31/"></script>
+    <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css"/>
+    <style>
+      html,
+      body,
+      #viewDiv {
+        padding: 2px;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+      }
+      #calcite-shell-panel-chart {
+         --calcite-shell-panel-width: 600px;
+      }
+    </style>
+    </head>
+
+    <body>
+        <calcite-shell>
+            <calcite-shell-panel id="calcite-shell-panel-chart" slot="panel-start" position="end" display-mode="float" > <!--resizable-->
+                <calcite-flow>
+                    <calcite-flow-item>
+                        <calcite-panel heading="雨温図" height-scale="l" data-panel-id="chart" collapsible>
+                            <!-- 横並びにするためスタイル定義のdivを追加 -->
+                            <!-- 参考 : https://developers.arcgis.com/javascript/latest/sample-code/sandbox/?sample=featurelayer-query -->
+                            <div style="display: flex; flex-direction: row">
+                                <calcite-fab id="createBarChartBtn" appearance="solid" icon="app-gear" scale="s" text-enabled text="Create Bar Chart"></calcite-fab>
+                                <calcite-fab id="appendLineChartBtn" appearance="solid" icon="app-gear" scale="s" text-enabled text="Append Line Chart"></calcite-fab>
+                                <calcite-fab id="clearChartsBtn" appearance="solid" icon="app-gear" scale="s" text-enabled text="Clear All Charts"></calcite-fab>
+                            </div>
+                            <div><!-- チャートのフィルター（もどき） --!>
+                                <calcite-input id="chartNum" placeholder="Filter Chart by number" alignment="end" number-button-type="none" type="number"></calcite-input>
+                            </div>
+                            <calcite-list id="chartsFlow">
+                                <!-- チャートを入れるところ -->
+                                <div id="feature-node"></div>
+                            </calcite-list>
+                        </calcite-panel>
+                    </calcite-flow-item>
+                </calcite-flow>
+            </calcite-shell-panel>
+        </calcite-shell>
+        <div id="viewDiv"></div>
+    </body>
+  <script>
+    require(["esri/Map","esri/views/MapView","esri/layers/CSVLayer"], function(Map, MapView, CSVLayer){
+        
+                // Create FeatureLayer instance with popupTemplate
+        const layer = new CSVLayer({
+          url: "https://github.com/kataya/js_playaround/blob/master/src/data/KishoAtlas_sample.csv",
+        });
+
+        // Create a map and add it to a MapView
+        const map = new Map({
+          basemap: "gray-vector",
+          layers: [layer]
+        });
+
+        const view = new MapView({
+          container: "viewDiv",
+          map: map,
+          zoom: 9,
+          center: [139.37244539, 35.57184203],
+        });
+        
+        
+        /***************************/ 
+        // データの定義
+        // Chart.js の複合チャートの検証用に、気象庁の過去の気象データから、適当な観測所の平年値を取得しべた書き
+        // https://www.data.jma.go.jp/stats/etrn/index.php
+        /***************************/ 
+        function getATData(value) {
+        
+            //平均気温（統計期間1991-2020）
+            const data = {};
+            //青森
+            data["0"] = [-0.9, -0.4, 2.8, 8.5, 13.7, 17.6, 21.8, 23.5, 19.9, 13.5, 7.2, 1.4];
+            //仙台
+            data["1"] = [2, 2.4, 5.5, 10.7, 15.6, 19.2, 22.9, 24.4, 21.2, 15.7, 9.8, 4.5];
+            //東京
+            data["2"] = [5.4, 6.1, 9.4, 14.3, 18.8, 21.9, 25.7, 26.9, 23.3, 18, 12.5, 7.7];
+            //名古屋
+            data["3"] = [4.8, 5.5, 9.2, 14.6, 19.4, 23, 26.9, 28.2, 24.5, 18.6, 12.6, 7.2];
+            //大阪
+            data["4"] = [6.2, 6.6, 9.9, 15.2, 20.1, 23.6, 27.7, 29, 25.2, 19.5, 13.8, 8.7];
+            //福岡
+            data["5"] = [6.9, 7.8, 10.8, 15.4, 19.9, 23.3, 27.4, 28.4, 24.7, 19.6, 14.2, 9.1];
+            return data[value.toString()];
+        }
+        
+        function getRData(value) {
+        
+            //降水量合計（統計期間1991-2020）
+            const data = {};
+            //青森
+            data["0"] = [139.9, 99, 75.2, 68.7, 76.7, 75, 129.5, 142, 133, 119.2, 137.4, 155.2];
+            //仙台
+            data["1"] = [42.3, 33.9, 74.4, 90.2, 110.2, 143.7, 178.4, 157.8, 192.6, 150.6, 58.7, 44.1];
+            //東京
+            data["2"] = [59.7, 56.5, 116, 133.7, 139.7, 167.8, 156.2, 154.7, 224.9, 234.8, 96.3, 57.9];
+            //名古屋
+            data["3"] = [50.8, 64.7, 116.2, 127.5, 150.3, 186.5, 211.4, 139.5, 231.6, 164.7, 79.1, 56.6];
+            //大阪
+            data["4"] = [47, 60.5, 103.1, 101.9, 136.5, 185.1, 174.4, 113, 152.8, 136, 72.5, 55.5];
+            //福岡
+            data["5"] = [74.4, 69.8, 103.7, 118.2, 133.7, 249.6, 299.1, 210, 175.1, 94.5, 91.4, 67.5];
+            return data[value.toString()];
+        }
+        
+        function getKansokusho(value) {
+            //観測所名
+            const data = {};
+            data["0"] = ["青森"];
+            data["1"] = ["仙台"];
+            data["2"] = ["東京"];
+            data["3"] = ["名古屋"];
+            data["4"] = ["大阪"];
+            data["5"] = ["福岡"];
+            return data[value.toString()];
+        }
+        
+        //ダミーデータを作成する関数
+        function createBarData() {
+            //https://qiita.com/sho-17/items/4a89f13e13fa9dcc250a
+            const data = [];
+            const min = 0;
+            const max = 200;
+            for (let i = 1; i < 13; i++) {
+                const val = Math.floor( Math.random() * (max - min) + min);
+                data.push(val);
+            }
+            return data;
+        }
+        
+        function createLineData() {
+            const data = [];
+            const min = 5;
+            const max = 50;
+            for (let i = 1; i < 13; i++) {
+                const val = Math.floor( Math.random() * (max - min) + min);
+                data.push(val);
+            }
+            return data;
+        }
+        
+        function createLabelData() {
+            //labels: ['0時', '1時', '2時', '3時', '4時', '5時', '6時', '7時', '8時', '9時', '10時', '11時',
+            // '12時', '13時', '14時', '15時', '16時', '17時', '18時', '19時', '20時', '21時', '22時', '23時'],
+            const labels = [];
+            for (let i = 1; i < 13; i++) {
+                const m = i.toString()  + "月";
+                labels.push(m);
+            }
+            return labels;
+        }
+        
+        /***************************/ 
+        // 変数の定義
+        /***************************/ 
+        let chartNumber = 0;
+        
+        /***************************/ 
+        // チャートをクリアする関数
+        /***************************/ 
+        function ClearAllChart() {
+            const div = document.getElementById("feature-node");
+            Array.from(div.getElementsByTagName('canvas')).forEach((c) => {
+                c.remove();
+            });
+            div.innerText = "";
+            chartNumber = 0;
+        }
+        
+        function ClearFirstChart() {
+            const div = document.getElementById("feature-node");
+            const firstChild = div.firstElementChild;
+            firstChild.remove();
+        }
+        
+
+        /***************************/ 
+        // 複合チャートの作成や更新する関数定義
+        // 参考： Updating Charts
+        // https://www.chartjs.org/docs/latest/developers/updates.html
+        /***************************/ 
+        //複合グラフを作成する関数定義
+        function CreateMixedChart() {
+            const containerDiv = document.getElementById("feature-node");
+            const chartDiv = document.createElement("div");
+
+            const canvas = document.createElement('canvas');
+            canvas.id = "myChart";
+
+            const label_data = createLabelData();
+            const bar_data = createBarData();
+            const line_data = createLineData();
+
+            const mixedChart = new Chart(canvas, {
+               type: 'bar',
+               data: {
+                   labels: label_data,
+                   datasets: [{
+                       label: 'Bar Dataset',
+                       data: bar_data,
+                       // this dataset is drawn below
+                       order: 2,
+                   }, {
+                       label: 'Line Dataset',
+                       data: line_data,
+                       type: 'line',
+                       // this dataset is drawn on top
+                       order: 1,
+                   }]
+               },
+               options: {
+                    //responsive: false, 
+               }
+            });
+            
+            chartDiv.appendChild(canvas);
+            containerDiv.appendChild(chartDiv);
+        }
+        
+        //棒グラフを作成する関数
+        function CreateBarChart() {
+            if (chartNumber > 5) {
+                alert("本サンプルには定義されたデータの上限を超えました");
+                return
+            }
+        
+            const containerDiv = document.getElementById("feature-node");
+            const chartDiv = document.createElement("div");
+            chartDiv.id = chartNumber;
+            chartDiv.style.borderBottom = "thin solid";
+
+            const canvas = document.createElement('canvas');
+            canvas.id = "myChart";
+            
+            const label_data = createLabelData();
+            //降水量のデータ
+            const bar_data = getRData(chartNumber); //createBarData();
+            
+            const barChart = new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: label_data,
+                    datasets: [{
+                        label: 'Bar Dataset',
+                        data: bar_data,
+                        // this dataset is drawn below
+                        yAxisID: 'rainY',
+                        label: '降水量',
+                        //skyblue  https://www.colordic.org/colorsample/1045
+                        backgroundColor: 'rgb(135, 206, 235)',
+                        order: 2,
+                    }]
+                },
+                options: {
+                    //responsive: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: "Number : " + chartNumber.toString() + " - " + getKansokusho(chartNumber),
+                        }
+                    },
+                    scales: {
+                        "rainY": {
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: "平均降水量（mm）"
+                            }
+                        },
+                        "temperatureY": {
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: "平均気温（度）"
+                            }
+                        },
+                    }
+                }
+            });
+            
+            chartDiv.appendChild(canvas);
+            containerDiv.appendChild(chartDiv);
+            
+            chartNumber += 1;
+        }
+        
+        //既存の棒グラフに線グラフを追加する関数
+        function AppendLineChart() {
+            const containerDiv = document.getElementById("feature-node");
+            
+            let chartCnt = 0;
+            //ラベル構文でbreak で抜ける箇所を指定
+            //https://qiita.com/oogaki_newmedia/items/6135c4b3afda7ede43cb
+            appended :for (const chartDiv of containerDiv.children) {
+                for (const canvas of chartDiv.children) {
+                    const chart = Chart.getChart(canvas);
+                    //barchart だけ追加されている状態の場合はlinechart を追加
+                    if (chart.data.datasets.length == 1) {
+                        //平均気温のデータ
+                        const line_data = getATData(chartCnt); //createLineData();
+                        const line_dataset = {
+                            label: 'Line Dataset',
+                            data: line_data,
+                            type: 'line',
+                            yAxisID: 'temperatureY',
+                            label: '気温',
+                            //violet https://www.colordic.org/colorsample/1126
+                            borderColor: 'rgb(238, 130, 238)',
+                            order: 1,
+                        };
+                        chart.data.datasets.push(line_dataset);
+                        chart.update();
+                        break appended;
+                    }
+                    
+                }
+                chartCnt += 1;
+            }
+        }
+        
+        //グラフが入っているdivの表示をフィルターする関数
+        function FilterChartDiv(value) {
+            const containerDiv = document.getElementById("feature-node");
+            for (const chartDiv of containerDiv.children) {
+                if ((chartDiv.id == value) || ( value === "")) {
+                    chartDiv.hidden = false;
+                } else {
+                    chartDiv.hidden = true;
+                }
+            }
+        }
+        
+        
+        /***************************/ 
+        // イベントリスナー
+        /***************************/ 
+        const createBarChartBtn = document.getElementById("createBarChartBtn");
+        createBarChartBtn.addEventListener("click", (event) => {
+            //CreateMixedChart();
+            CreateBarChart();
+        });
+        
+        const appendLineChartBtn = document.getElementById("appendLineChartBtn");
+        appendLineChartBtn.addEventListener("click", (event) => {
+            AppendLineChart();
+        });
+        
+        const clearBtn = document.getElementById("clearChartsBtn");
+        clearBtn.addEventListener("click", (event) => {
+            ClearAllChart();
+        });
+        
+        const chartNumInput = document.getElementById("chartNum");
+        chartNumInput.addEventListener("calciteInputChange", (event) => {
+            FilterChartDiv(chartNumInput.value);
+        });
+        
+    });
+    
+  </script>
+</html>
